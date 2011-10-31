@@ -1,22 +1,24 @@
-setwd("/Users/seanhackett/Desktop/Cornell/mel_metabolism/")
+setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
 
 
 #functions to find reactions in the yeast metabolomic reconstruction
 load("yeast_stoi.R")
-rxns = rxn_search(stoiMat, "glycerol kinase", is_rxn = TRUE)
-cols <- c(232, 596, 816)
-redmat <- stoiMat[apply(stoiMat[,cols], 1, is.not.zero), cols]
+#rxns = rxn_search(stoiMat, "succinate dehydrogenase", is_rxn = TRUE)
+#cols <- c(232, 596, 816)
+#redmat <- stoiMat[apply(stoiMat[,cols], 1, is.not.zero), cols]
 
+valid.reactions <- read.table("mel_network.csv", sep = ",", blank.lines.skip = FALSE, header = TRUE)
 
-valid.reactions <- read.table("/Users/seanhackett/Desktop/Cornell/mel_metabolism/mel_network.csv", sep = ",", blank.lines.skip = FALSE, header = TRUE)
-
-cytosolic.reactions <- valid.reactions[valid.reactions$Compartment == "Cytosol",][!is.na(valid.reactions[valid.reactions$Compartment == "Cytosol",]$ReactionNumber),]
+cytosolic.reactions <- valid.reactions[valid.reactions$Compartment == "c",][!is.na(valid.reactions[valid.reactions$Compartment == "c",]$ReactionNumber),]
 cytosolic.stoi <- stoiMat[,cytosolic.reactions$ReactionNumber][apply(stoiMat[,cytosolic.reactions$ReactionNumber], 1, is.not.zero),]
 rownames(cytosolic.stoi) <- lapply(rownames(cytosolic.stoi), paste, "_c", sep = "")
+colnames(cytosolic.stoi) <- paste(cytosolic.reactions$Name, cytosolic.reactions$Compartment, sep = "_")
 
-mitochondrial.reactions <- valid.reactions[valid.reactions$Compartment == "Mitochondria",][!is.na(valid.reactions[valid.reactions$Compartment == "Mitochondria",]$ReactionNumber),]
+
+mitochondrial.reactions <- valid.reactions[valid.reactions$Compartment == "m",][!is.na(valid.reactions[valid.reactions$Compartment == "m",]$ReactionNumber),]
 mitochondrial.stoi <- stoiMat[, mitochondrial.reactions $ReactionNumber][apply(stoiMat[, mitochondrial.reactions $ReactionNumber], 1, is.not.zero),]
 rownames(mitochondrial.stoi) <- lapply(rownames(mitochondrial.stoi), paste, "_m", sep = "")
+colnames(mitochondrial.stoi) <- paste(mitochondrial.reactions$Name, mitochondrial.reactions$Compartment, sep = "_")
 
 #Hand-added reactions
 
@@ -28,18 +30,18 @@ cytosolic.stoi <- add.reaction(cytosolic.stoi, "Hexadecanoate (n-C16:0)_c", 1, N
 cytosolic.stoi <- add.reaction(cytosolic.stoi, "alpha-D-Ribose 5-phosphate_c", 1, NULL, NULL, "Ribose biosynthesis")
 cytosolic.stoi <- add.reaction(cytosolic.stoi, "CO2_c", 1, NULL, NULL , "CO2 leaving")
 cytosolic.stoi <- add.reaction(cytosolic.stoi, NULL, NULL, "O2_c", 1, "O2 entering")
-cytosolic.stoi <- add.reaction(cytosolic.stoi, c("Diphosphate_c", "H2O_c"), c(1,1), "Phosphate_c", 2, "Pyrophosphatase")
+cytosolic.stoi <- add.reaction(cytosolic.stoi, c("Diphosphate_c", "H2O_c"), c(1,1), "Phosphate_c", 2, "Pyrophosphatase_c")
 cytosolic.stoi <- add.reaction(cytosolic.stoi, c("H2O_c", "Coenzyme A_c", "ATP_c", "Citrate_c") , c(1,1,1,1), 
-c("Oxaloacetate_c", "Acetyl-CoA_c", "ADP_c", "Phosphate_c"), c(1,1,1,1), "Citrate lyase")
-cytosolic.stoi <- add.reaction(cytosolic.stoi, c("Carnitine_c", "Palmitoyl-CoA (n-C16:0CoA)_c"), c(1,1), c("Palmitoylcarnitine_c", "Coenzyme A_c"), c(1,1), "Palmitoylcarnitine synthesis")
-cytosolic.stoi <- add.reaction(cytosolic.stoi, c("UDP_c", "ATP_c"), c(1,1), c("UTP_c", "ADP_c"), c(1,1), "Nucloside diphosphate kinase (UTP-ATP)")
+c("Oxaloacetate_c", "Acetyl-CoA_c", "ADP_c", "Phosphate_c"), c(1,1,1,1), "Citrate lyase_c")
+cytosolic.stoi <- add.reaction(cytosolic.stoi, c("Carnitine_c", "Palmitoyl-CoA (n-C16:0CoA)_c"), c(1,1), c("Palmitoylcarnitine_c", "Coenzyme A_c"), c(1,1), "Palmitoylcarnitine synthesis_c")
+cytosolic.stoi <- add.reaction(cytosolic.stoi, c("UDP_c", "ATP_c"), c(1,1), c("UTP_c", "ADP_c"), c(1,1), "Nucloside diphosphate kinase (UTP-ATP)_c")
 
-mitochondrial.stoi <- add.reaction(mitochondrial.stoi, c("Palmitoylcarnitine_m", "Coenzyme A_m"), c(1,1), c("Carnitine_m", "Palmitoyl-CoA (n-C16:0CoA)_m"), c(1,1), "Palmitoylcarnitine breakdown")
+mitochondrial.stoi <- add.reaction(mitochondrial.stoi, c("Palmitoylcarnitine_m", "Coenzyme A_m"), c(1,1), c("Carnitine_m", "Palmitoyl-CoA (n-C16:0CoA)_m"), c(1,1), "Palmitoylcarnitine breakdown_m")
 mitochondrial.stoi <- add.reaction(mitochondrial.stoi, 
 c("Palmitoyl-CoA (n-C16:0CoA)_m", "Flavin adenine dinucleotide oxidized_m", "H2O_m", "Nicotinamide adenine dinucleotide_m", "Coenzyme A_m"),
 c(1, 7, 7, 7, 7), c("Flavin adenine dinucleotide reduced_m", "Nicotinamide adenine dinucleotide - reduced_m", "H+_m", "Acetyl-CoA_m"), c(7, 7, 7, 8),
-"Palmitoyl-CoA catabolism")
-mitochondrial.stoi <- add.reaction(mitochondrial.stoi, c("Succinyl-CoA_m", "Phosphate_m", "GDP_m"), c(1,1,1), c("Succinate_m", "Coenzyme A_m", "GTP_m"), c(1,1,1), "Succinyl CoA synthetase")
+"Palmitoyl-CoA catabolism_m")
+mitochondrial.stoi <- add.reaction(mitochondrial.stoi, c("Succinyl-CoA_m", "Phosphate_m", "GDP_m"), c(1,1,1), c("Succinate_m", "Coenzyme A_m", "GTP_m"), c(1,1,1), "Succinyl CoA synthetase_m")
 
 
 joint.stoi <- cbind(rbind(cytosolic.stoi, matrix(data = 0, ncol = length(cytosolic.stoi[1,]), nrow = length(mitochondrial.stoi[,1]))), rbind(matrix(data = 0, ncol = length(mitochondrial.stoi[1,]), nrow = length(cytosolic.stoi[,1])), mitochondrial.stoi))
@@ -48,8 +50,8 @@ colnames(joint.stoi) <- c(colnames(cytosolic.stoi), colnames(mitochondrial.stoi)
 
 joint.stoi <- add.reaction(joint.stoi, c("Glycerol 3-phosphate_c", "Flavin adenine dinucleotide oxidized_m"), c(1,1), 
 c("Dihydroxyacetone phosphate_c", "Flavin adenine dinucleotide reduced_m"), c(1,1), "Glycerol 3-phosphate shuttle")
-joint.stoi <- add.reaction(joint.stoi, c("Flavin adenine dinucleotide reduced_m", "H+_m"), c(1, 6), c("Flavin adenine dinucleotide oxidized_m", "H+_c"), c(1, 6), "FADH2 oxidation for proton transport")
-joint.stoi <- add.reaction(joint.stoi, c("Nicotinamide adenine dinucleotide phosphate - reduced_m", "H+_m"), c(1, 10), c("Nicotinamide adenine dinucleotide phosphate_m", "H+_c"), c(1, 10), "NADH oxidation for proton transport")
+joint.stoi <- add.reaction(joint.stoi, c("Flavin adenine dinucleotide reduced_m", "H+_m", "O2_m"), c(1, 8, 0.5), c("Flavin adenine dinucleotide oxidized_m", "H+_c", "H2O_m"), c(1, 6, 1), "FADH2 oxidation for proton transport")
+joint.stoi <- add.reaction(joint.stoi, c("Nicotinamide adenine dinucleotide - reduced_m", "H+_m", "O2_m"), c(1, 12, 0.5), c("Nicotinamide adenine dinucleotide_m", "H+_c", "H2O_m"), c(1, 10, 1), "NADH oxidation for proton transport")
 joint.stoi <- add.reaction(joint.stoi, c("ADP_m", "Phosphate_m", "H+_c"), c(1, 1, 3), c("ATP_m", "H+_m"), c(1, 3), "ATP synthetase")
 joint.stoi <- add.reaction(joint.stoi, c("GTP_m", "ADP_m"), c(1,1), c("GDP_m", "ATP_m"), c(1,1), "Nucleoside diphosphate kinase (GTP-ATP)")
 joint.stoi <- add.reaction(joint.stoi, c("Pyruvate_c", "H+_c"), c(1,1), c("Pyruvate_m", "H+_m"), c(1,1), "Pyruvate transporter")
@@ -57,12 +59,33 @@ joint.stoi <- add.reaction(joint.stoi, c("Phosphate_c", "H+_c"), c(1,1), c("Phos
 joint.stoi <- add.reaction(joint.stoi, "ADP_c", 1, "ATP_c", 1, "ATP/ADP antiport")
 joint.stoi <- add.reaction(joint.stoi, c("L-Malate_m", "Phosphate_c"), c(1,1), c("L-Malate_c", "Phosphate_m"), c(1,1), "Dicarboxylate carrier")
 joint.stoi <- add.reaction(joint.stoi, c("Citrate_m", "H+_m", "L-Malate_c"), c(1,1,1), c("Citrate_c", "H+_c", "L-Malate_m"), c(1,1,1), "Tricarboxylate carrier")
+joint.stoi <- add.reaction(joint.stoi, "H2O_c", 1, "H2O_m", 1, "Water transport")
+joint.stoi <- add.reaction(joint.stoi, "O2_c", 1, "O2_m", 1, "Oxygen transport")
+joint.stoi <- add.reaction(joint.stoi, "H2O_m", 1, c("OH-_m", "H+_m"), c(1,1), "Water dissociation_m")
+joint.stoi <- add.reaction(joint.stoi, "H2O_c", 1, c("OH-_c", "H+_c"), c(1,1), "Water dissociation_c")
+joint.stoi <- add.reaction(joint.stoi, "H2O_c", 1, c("OH-_c", "H+_c"), c(1,1), "Water dissociation_c")
+joint.stoi <- add.reaction(joint.stoi, "H2O_c", 1, NULL, NULL, "Water boundary")
+
 
 #joint.stoi <- add.reaction(joint.stoi, c("L-Malate_m", "H+_m"), c(1,1), c("L-Malate_c", "H+_c"), c(1,1), "Malate transporter")
 #joint.stoi <- add.reaction(joint.stoi, c("Citrate_m", "H+_m"), c(1,1), c("Citrate_c", "H+_c"), c(1,1), "Citrate transporter")
 
+save(joint.stoi, file = "drosophila_stoi.R")
 
+oldstoi <- joint.stoi
+match.mat <- matrix(data = 0, ncol = length(oldstoi[1,]), nrow = length(joint.stoi[1,]))
+colnames(match.mat) <- colnames(oldstoi)
 
+for(i in 1:length(joint.stoi[1,])){
+for(j in 1:length(oldstoi[1,])){	
+	
+match.mat[i,j] <- ifelse(sum((names(joint.stoi[,i][joint.stoi[,i] != 0]) %in% names(oldstoi[,j][oldstoi[,j] != 0]))) == length(joint.stoi[,i][joint.stoi[,i] != 0]), 1, 0)
+	
+	
+	}}
+
+c(1:length(match.mat[1,]))[apply(match.mat, 2, sum) == 0]
+oldstoi[,69]
 
 
 add.reaction <- function(stoi, reactants, moles_reactants, products, moles_products, reaction_name){
@@ -84,130 +107,6 @@ add.reaction <- function(stoi, reactants, moles_reactants, products, moles_produ
 		colnames(output)[length(stoi[1,])+1] <- reaction_name
 		output
 		}
-	
-	
-	
-
-
-
-
-
-
-
-
-#H20 - exchange & mito
-#CO2/O2 mitochondrial exchange
-#UTP/ATP trans-phosphorylation
-
-
-
-transport
-921 - trehalose
-455 - glucose transport
-glycogen transport
-
-trehalose
-918 - trehalose p
-919 - alpha trehalose p synthase
-920 - alpha trehalse
-518 - HEX
-
-Glycogen
-439 - branching
-454 - GP
-477 - GS 
-434 - UDP-glucose synthesis
-? - pyrophosphatase
-
-glycolysis
-735 - PGM
-731 - PGI
-390 - aldolase
-726 - PFK
-916 - TPI
-437 - glyceraldehyde3P: G3PD
-732 - phosphoglycerate K
-734 - phosphoglycerate M
-322 - enolase
-810 - pyruvate kinase
-
-PPP
-4 - G6PD
-733 - 6PGlactonase
-483 - 6PGD
-835 - ribulose 5P epimerase
-836 - ribose 5P isomerase
-886 - transaldolase
-906, 907 - transketolase
-
-lower glycolytic branches
-
-606, 607 - NAD/NADP malic enzyme
-760 - pep carboxykinase
-604 - malate dehydrogenase
-
-420 - glycerol3PD - cytoNAD
-421 - glycerol3PD - mitoFAD
-120 - ADH
-136 - aldehyde dehydrogenase
-82 - acetylCoAsynthase
-
-### Mito transport rxns
-
-232 - citrate out
-596 - malate out
-816 - pyruvate in
-GPO shuttle
-palmiotyle CoA
-
-### FAS
-
-56 - acetylCoA carboxylase: acetylCoA -> malonylCoA
-75 - acetylCoA transacylase
-603 - malonylCoA transacylase
-
-388 - C8 synthesis lumped
-365 - c10 - Decanoyl CoA
-368 - c12 - Dodecanoyl CoA
-371 - c14 - Tetradecanoyl CoA
-376 - c16 - palmitoyl CoA synth
-
-387, 364, 367, 370, 375 - ACP reactions
-334 - palmitoylACP hydrolysis -> Hexadecanoate
-789 - acyl-CoA thioesterase -> Palmitoyl-CoA
-237 - carnitine transport
-
-palmitoylCoA +  carnitine -> palmitoyl-carnitine
-palmitoylCoA transport
-palmitoylcarnitine + CoA -> carnitine + palmitoylCoA
-
-###oxidation
-
-### Mitochondrial rxns
-
-720 - acetylCoa production by PDH
-714 - pyruvate carboxylase
-
-TCA
-
-242 - citrate synthase
-77 - aconitase
-549 - isocitrate dehydrogenase, 550 - NADP IDH
-111, 112, 443 - alpha-ketoglutarate dehydrogenase
-881 - succinate-CoA ligase
-878 - SDH
-415 - FUM
-604 - malate dehydrogenase
-
-
-Misc
-
-82 - acetyl coa synthetase
-180 -  ATP adenylyltransferase
-183,184,186
-742 - phosphate transporter
-511 - bicarbonate equilibrium
-
 
 rxn_search = function(stoiMat, search_string, is_rxn = TRUE){
 	#search by metabolite or reactant and return all reactions and nonzero metabolites.
