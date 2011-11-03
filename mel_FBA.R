@@ -64,7 +64,7 @@ gas_exchange <- gas_exchange * SF
 
 library(limSolve)
 
-joint.stoi.store -> joint.stoi
+#joint.stoi.store -> joint.stoi
 
 ##### add all metabolites in as boundary
 
@@ -92,16 +92,20 @@ G_flux <- t(G_flux)
 
 # irreversible reactions
 
-irreversible = c("Trehalose6P synthetase_c", "Glycogen Synthase_c", "6-phosphogluconate dehydrogenase_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c")
+#irreversible = c("Trehalose6P synthetase_c", "Glycogen Synthase_c", "6-phosphogluconate dehydrogenase_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c")
 
-#irreversible = c("Trehalose6P synthetase_c", "Glycogen Synthase_c", "6-phosphogluconate dehydrogenase_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "FADH2 oxidation for proton transport", "NADH oxidation for proton transport", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "Trehalase_c", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "C8 synthesis_c", "Pyruvate dehydrogenase_m")
+irreversible = c("Trehalose6P synthetase_c", "Glycogen Synthase_c", "6-phosphogluconate dehydrogenase_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "FADH2 oxidation for proton transport", "NADH oxidation for proton transport", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "Trehalase_c", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "C8 synthesis_c", "Pyruvate dehydrogenase_m")
 
-G = matrix(data = NA, ncol = length(irreversible), nrow = length(joint.stoi.red[1,]))
+G_irr = matrix(data = NA, ncol = length(irreversible), nrow = length(joint.stoi.red[1,]))
 for (i in 1:length(irreversible)){
-G[,i] = ifelse(colnames(joint.stoi.red) == irreversible[i], 1, 0)
+G_irr[,i] = ifelse(colnames(joint.stoi.red) == irreversible[i], 1, 0)
 	}
-G <- t(G)
-H = rep(0, times = length(irreversible))
+G_irr <- t(G_irr)
+H_irr = rep(0, times = length(irreversible))
+
+G <- rbind(G_flux, G_irr)
+H <- c(H_flux, H_irr)
+
 
 #reactions for CO2 and O2 exchange
 
@@ -114,7 +118,7 @@ B = gas_exchange[1,c(1,2)]
 
 
 #lsei(A = t(A), B = t(B), E = E, F = F, G = G, H = H)
-solution <- lsei(A = t(A), B = t(B), E = E, F = F, G = G_flux, H = H_flux)$X
+solution <- lsei(A = t(A), B = t(B), E = E, F = F, G = G, H = H)$X
 min.solution[h] <- lsei(A = t(A), B = t(B), E = E, F = F, G = G_flux, H = H_flux)$IsError
 }
 	
@@ -182,6 +186,18 @@ length(E_coli$B)
 
 dim(E_coli$G)
 length(E_coli$H)
+
+
+
+stoi.list <- list()
+
+for(i in 1:length(joint.stoi.store[1,])){
+	col.stoi <- joint.stoi.store[,colnames(joint.stoi.store) == colnames(joint.stoi.store)[i]]
+	stoi.list[[i]] <- col.stoi[col.stoi != 0]
+	
+	}
+
+
 
 
 
