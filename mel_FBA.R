@@ -20,6 +20,8 @@ setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
 
 load("drosophila_stoi.R")
 source("path_length_calc.R")
+source("flimsy_plate_extract.R")
+library(limSolve)
 
 ###### Read in and calculate the paramters needed to transform A/s into moles/s using the beer-lambert law and path-length calculated from the well-geometry and volume of a microtiter-assay
 
@@ -29,7 +31,12 @@ assay_parameters <- assay_parameters[,-1]
 assay_parameters <- cbind(assay_parameters, data.frame(path_length = NA))
 
 for(i in 1:length(assay_parameters[,1])){
-assay_parameters$path_length[i] <- find.pl(assay_parameters$assay_volume[i], height_scale, bottom_d)$minimum * 100	}
+
+#If assay is visible then use a different type of plate is used
+if(assay_parameters$molar_absorptivity[i] %in% c(16000, 19100, 11500)){
+	assay_parameters$path_length[i] <- flimsy_pl(assay_parameters$assay_volume[i]*1e6)
+	}else{
+assay_parameters$path_length[i] <- find.pl(assay_parameters$assay_volume[i], height_scale, bottom_d)$minimum * 100	}}
 	
 enzymeOD <- pop.enzyme[,((colnames(pop.enzyme) %in% rownames(assay_parameters)))]
 enzyme_moles_per_second <- enzymeOD
@@ -50,8 +57,8 @@ for (i in 1:length(enzyme_moles_per_second[1,])){
 kinetic_enzymes = enzyme_moles_per_second[,apply(is.na(enzyme_moles_per_second), 2, sum) == 0]
 kinetic_reactions <- unlist(lapply(colnames(kinetic_enzymes), find.name, assay_parameters)) 
 
-kinetic_enzymes <- kinetic_enzymes[,colnames(kinetic_enzymes) != "SDH"]
-kinetic_reactions <- kinetic_reactions[colnames(kinetic_enzymes) != "SDH"]
+#kinetic_enzymes <- kinetic_enzymes[,colnames(kinetic_enzymes) != "SDH"]
+#kinetic_reactions <- kinetic_reactions[colnames(kinetic_enzymes) != "SDH"]
 
 SF <- 1e11
 
@@ -62,7 +69,6 @@ gas_exchange <- gas_exchange * SF
 
 #maximum flux through 
 
-library(limSolve)
 
 #joint.stoi.store -> joint.stoi
 
@@ -120,7 +126,10 @@ B = gas_exchange[1,c(1,2)]
 #lsei(A = t(A), B = t(B), E = E, F = F, G = G, H = H)
 solution <- lsei(A = t(A), B = t(B), E = E, F = F, G = G, H = H)$X
 min.solution[h] <- lsei(A = t(A), B = t(B), E = E, F = F, G = G_flux, H = H_flux)$IsError
-}
+
+xs<-xsample(A = t(A), B = t(B), E = E, F = F, G = G, H = H, iter=50000,out=5000,type="rda",x0=solution)
+
+
 	
 G_flux %*% solution	
 sum(((t(A) %*% solution) - B)^2)
