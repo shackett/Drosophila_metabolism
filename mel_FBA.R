@@ -1,27 +1,36 @@
 ###### Read in absorbance posterior medians for enzyme activity traits as well as flight and respirometry traits
 
-setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/MCMC_files")
+setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
 
-line.enzyme <- read.table("lnMat.tsv", sep = "\t", header = TRUE)
-line.flight <- read.table("FLTlnMns.tsv", sep = "\t", header = TRUE)
-line.resp <- read.table("RESPlnMns.tsv", sep = "\t", header = TRUE)
+line.enzyme <- read.table("MCMC_files/lnMat.tsv", sep = "\t", header = TRUE)
+line.flight <- read.table("MCMC_files/FLTlnMns.tsv", sep = "\t", header = TRUE)
+line.resp <- read.table("MCMC_files/RESPlnMns.tsv", sep = "\t", header = TRUE)
+rownames(line.enzyme) <- as.character(line.enzyme$ln_nam)
+rownames(line.flight) <- as.character(line.flight$ln_nam)
+rownames(line.resp) <- as.character(line.resp$ln_nam)
+line.enzyme <- line.enzyme[,-1]; line.flight <- line.flight[,-1]; line.resp <- line.resp[,-1]
 
-pop.enzyme <- read.table("popMat.tsv", sep = "\t", header = TRUE)
-pop.flight <- read.table("FLTpopMns.tsv", sep = "\t", header = TRUE)
-pop.resp <- read.table("RESPpopMns.tsv", sep = "\t", header = TRUE)
+pop.enzyme <- read.table("MCMC_files/popMat.tsv", sep = "\t", header = TRUE)
+pop.flight <- read.table("MCMC_files/FLTpopMns.tsv", sep = "\t", header = TRUE)
+pop.resp <- read.table("MCMC_files/RESPpopMns.tsv", sep = "\t", header = TRUE)
 rownames(pop.enzyme) <- as.character(pop.enzyme$pop_nam)
 rownames(pop.flight) <- as.character(pop.flight$pop_nam)
 rownames(pop.resp) <- as.character(pop.resp$pop_nam)
-pop.enzyme <- pop.enzyme[,-1]
-pop.flight <- pop.flight[,-1]
-pop.resp <- pop.resp[,-1]
-
-setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
+pop.enzyme <- pop.enzyme[,-1]; pop.flight <- pop.flight[,-1]; pop.resp <- pop.resp[,-1]
 
 load("drosophila_stoi.R")
 source("path_length_calc.R")
 source("flimsy_plate_extract.R")
 library(limSolve)
+library(gplots)
+
+##### a few functions
+
+find.name <- function(kinetic_enzyme, assay_parameters){
+	assay_parameters$Model_name[rownames(assay_parameters) == kinetic_enzyme]
+	}
+
+
 
 ###### Read in and calculate the paramters needed to transform A/s into moles/s using the beer-lambert law and path-length calculated from the well-geometry and volume of a microtiter-assay
 
@@ -52,8 +61,6 @@ for (i in 1:length(enzyme_moles_per_second[1,])){
 	enzyme_moles_per_second[,i] <- ((enzymeOD[,i]/(params$molar_absorptivity*params$path_length))*params$assay_volume*(params$assay_volume/20e-6))/params$OD_scaling
 	}}
 
-#leave out SDH for now
-
 kinetic_enzymes = enzyme_moles_per_second[,apply(is.na(enzyme_moles_per_second), 2, sum) == 0]
 kinetic_reactions <- unlist(lapply(colnames(kinetic_enzymes), find.name, assay_parameters)) 
 
@@ -67,24 +74,24 @@ gas_exchange = pop.resp[,c(1:2)]/1e7/22.4/3600
 kinetic_enzymes <- kinetic_enzymes * SF
 gas_exchange <- gas_exchange * SF
 
-#maximum flux through 
-
-
-#joint.stoi.store -> joint.stoi
-
-##### add all metabolites in as boundary
-
-#joint.stoi <- cbind(joint.stoi, diag(length(joint.stoi[,1])))
-
-#min.solution <- rep(NA, times = length(joint.stoi[,1]))
-
-#for (h in 1:length(joint.stoi[,1])){
-
-joint.stoi.red <- joint.stoi#cbind(joint.stoi, diag(length(joint.stoi[,1]))[,h])
-#joint.stoi.red <- cbind(joint.stoi, diag(length(joint.stoi[,1]))[,h])
+joint.stoi.red <- joint.stoi
 	
-E = joint.stoi.red
-F = rep(0, times = length(joint.stoi.red[,1]))
+S = joint.stoi.red
+f = rep(0, times = length(joint.stoi.red[,1]))
+
+# irreversible reactions
+irreversible = c("Trehalose6P synthetase_c", "Glycogen Synthase_c", "6-phosphogluconate dehydrogenase_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "FADH2 oxidation for proton transport", "NADH oxidation for proton transport", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "Trehalase_c", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "C8 synthesis_c", "Pyruvate dehydrogenase_m", "Phosphofructokinase_c", "Trehalase_c")
+#, "Phosphoglycerate kinase_c", 
+
+#sample matricies: kinetic_enzymes & gas_exchange
+
+#iterate through all samples
+
+pop.fluxes <- matrix(NA, nrow = length(S[1,]), ncol = 5)
+rownames(pop.fluxes) <- colnames(S)
+colnames(pop.fluxes) <- rownames(kinetic_enzymes)
+
+for (line in c(1:5)){
 
 #reactions corresponding to each measured Vmax
 
@@ -92,15 +99,11 @@ G_flux <- matrix(data = NA, ncol = length(kinetic_enzymes[1,]), nrow = length(jo
 H_flux <- rep(NA, times = length(kinetic_enzymes[1,]))
 for (i in 1:length(kinetic_enzymes[1,])){
 	G_flux[,i] <- ifelse(colnames(joint.stoi.red) == kinetic_reactions[i], -1, 0)
-	H_flux[i] <- -1*kinetic_enzymes[1,i]
+	H_flux[i] <- -1*kinetic_enzymes[line,i]
 	}
 G_flux <- t(G_flux)
 
-# irreversible reactions
 
-#irreversible = c("Trehalose6P synthetase_c", "Glycogen Synthase_c", "6-phosphogluconate dehydrogenase_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c")
-
-irreversible = c("Trehalose6P synthetase_c", "Glycogen Synthase_c", "6-phosphogluconate dehydrogenase_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "FADH2 oxidation for proton transport", "NADH oxidation for proton transport", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "Trehalase_c", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "C8 synthesis_c", "Pyruvate dehydrogenase_m")
 
 G_irr = matrix(data = NA, ncol = length(irreversible), nrow = length(joint.stoi.red[1,]))
 for (i in 1:length(irreversible)){
@@ -110,7 +113,7 @@ G_irr <- t(G_irr)
 H_irr = rep(0, times = length(irreversible))
 
 G <- rbind(G_flux, G_irr)
-H <- c(H_flux, H_irr)
+h <- c(H_flux, H_irr)
 
 
 #reactions for CO2 and O2 exchange
@@ -120,95 +123,14 @@ A = matrix(data = NA, ncol = length(exchange_rxns), nrow = length(joint.stoi.red
 for (i in 1:length(exchange_rxns)){
 	A[,i] <- ifelse(colnames(joint.stoi.red) == exchange_rxns[i], 1, 0)
 	}
-B = gas_exchange[1,c(1,2)]
+u = gas_exchange[line,c(1,2)]
 
 
-#lsei(A = t(A), B = t(B), E = E, F = F, G = G, H = H)
-solution <- lsei(A = t(A), B = t(B), E = E, F = F, G = G, H = H)$X
-min.solution[h] <- lsei(A = t(A), B = t(B), E = E, F = F, G = G_flux, H = H_flux)$IsError
+pop.fluxes[,line] <- lsei(A = t(A), B = t(u), E = S, F = f, G = G, H = h)$X
+}
 
-xs<-xsample(A = t(A), B = t(B), E = E, F = F, G = G, H = H, iter=50000,out=5000,type="rda",x0=solution)
-
-
-	
-G_flux %*% solution	
-sum(((t(A) %*% solution) - B)^2)
-E %*% solution == F
-	
-rownames(joint.stoi.red)[min.solution == "FALSE"]	
-	
-	
-
-
-#colnames(joint.stoi)[!(colnames(joint.stoi) %in% reaction_names)]
-
-#reduce joint.stoi
-#reaction_names = c("CO2 leaving", "O2 entering", "6-phosphogluconate dehydrogenase_c", "Glucose 6-phosphate dehydrogenase_c", "Lactonase_c", "Ribulose 5-phosphate epimerase_c", "Ribose 5-phosphate isomerase_c", "Transaldolase: 6,4-7,3_c", "Transketolase: 7,3-5,5_c", "Transketolase: 6,4-5,5_c", "Phosphoglucose isomerase_c", "Trehalose6P phosphatase_c", "Trehalase_c", "Trehalose6P synthetase_c", "Hexokinase_c", "Phosphoglucomutase_c", "Branching enzyme_c", "Glycogen phosphorylase_c", "Glycogen Synthase_c", "UDP-pyrophosphorylase_c") 
-#"Phosphofructokinase_c")
-
-#"Aldolase_c", "Triose phosphate isomerase_c", "Glyceraldehyde 3P dehydrogenase_c", "Phosphoglycerate kinase_c", "Phosphoglycerate mutase_c", "Enolase_c", "Glycerol 3-phosphate dehydrogenase (NAD)_c"
-
-#joint.stoi <- joint.stoi[,colnames(joint.stoi) %in% reaction_names]
-#joint.stoi <- joint.stoi[apply(joint.stoi != 0, 1, sum) != 0,]
-#added_boundary <- c("H2O_c", "H+_c", "Nicotinamide adenine dinucleotide phosphate - reduced_c", "Nicotinamide adenine dinucleotide phosphate_c", "UTP_c", "UDP_c", "Phosphate_c", "ATP_c", "ADP_c", "Nicotinamide adenine dinucleotide_c", "Nicotinamide adenine dinucleotide - reduced_c ", "Phosphoenolpyruvate_c", "Glycerol 3-phosphate_c", "D-Fructose 2,6-bisphosphate_c", "D-Glucose_c", "D-Glucose 6-phosphate_c")
-#for(i in 1:length(added_boundary)){
-#	joint.stoi <- cbind(joint.stoi, ifelse(rownames(joint.stoi) == added_boundary[i], 1, 0))
-#	}
-#colnames(joint.stoi)[colnames(joint.stoi) == ""] <- added_boundary
-
-
-#linp
-E = joint.stoi
-F = rep(0, times = length(joint.stoi[,1]))
-
-#reactions corresponding to each measured Vmax
-
-#reactions for CO2 and O2 exchange
-
-exchange_rxns = c("CO2 leaving", "O2 entering")
-A = matrix(data = NA, ncol = length(exchange_rxns), nrow = length(joint.stoi[1,]))
-for (i in 1:length(exchange_rxns)){
-	A[,i] <- ifelse(colnames(joint.stoi) == exchange_rxns[i], 1, 0)
-	}
-A <- t(A)	
-B = pop.resp[1,c(1,2)]
-
-
-solution <- lsei(A = A, B = t(B), E = E, F = F)$X
-
-xblah = rep(1, times = length(joint.stoi[1,]))
-
-(A %*% xblah) == B
-(E %*% xblah) == F
-
-sum(((A %*% solution) - B)^2)
-E %*% solution == F
-
-dim(A)
-length(B)
-
-dim(E)
-length(F)
-
-dim(E_coli$A)
-length(E_coli$B)
-
-dim(E_coli$G)
-length(E_coli$H)
-
-
-
-stoi.list <- list()
-
-for(i in 1:length(joint.stoi.store[1,])){
-	col.stoi <- joint.stoi.store[,colnames(joint.stoi.store) == colnames(joint.stoi.store)[i]]
-	stoi.list[[i]] <- col.stoi[col.stoi != 0]
-	
-	}
-
-
-
-
+nonzero.pop.flux <- pop.fluxes[apply(pop.fluxes == 0, 1, sum) != length(pop.fluxes[1,]),]
+heatmap.2(nonzero.pop.flux - apply(nonzero.pop.flux, 1, mean))/apply(nonzero.pop.flux, 1, sd)
 
 
 
@@ -226,9 +148,7 @@ for(i in 1:length(joint.stoi.store[1,])){
 
 
 
-find.name <- function(kinetic_enzyme, assay_parameters){
-	assay_parameters$Model_name[rownames(assay_parameters) == kinetic_enzyme]
-	}
+
 
 
 
