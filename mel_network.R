@@ -3,7 +3,7 @@ setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
 
 #functions to find reactions in the yeast metabolomic reconstruction
 load("yeast_stoi.R")
-#rxns = rxn_search(stoiMat, "fructokinase", is_rxn = TRUE)
+#rxns = rxn_search(stoiMat, "Acetyl-CoA synthase", is_rxn = TRUE)
 #cols <- c(232, 596, 816)
 #redmat <- stoiMat[apply(stoiMat[,cols], 1, is.not.zero), cols]
 
@@ -29,8 +29,6 @@ colnames(mitochondrial.stoi) <- paste(mitochondrial.reactions$Name, mitochondria
 
 #Hand-added reactions
 
-#added.reactions <- valid.reactions[is.na(valid.reactions$ReactionNumber),]
-
 cytosolic.stoi <- add.reaction(cytosolic.stoi, c("Diphosphate_c", "H2O_c"), c(1,1), "Phosphate_c", 2, "Pyrophosphatase_c")
 cytosolic.stoi <- add.reaction(cytosolic.stoi, c("H2O_c", "Coenzyme A_c", "ATP_c", "Citrate_c") , c(1,1,1,1), 
 c("Oxaloacetate_c", "Acetyl-CoA_c", "ADP_c", "Phosphate_c"), c(1,1,1,1), "Citrate lyase_c")
@@ -38,6 +36,8 @@ cytosolic.stoi <- add.reaction(cytosolic.stoi, c("Carnitine_c", "Palmitoyl-CoA (
 cytosolic.stoi <- add.reaction(cytosolic.stoi, c("UDP_c", "ATP_c"), c(1,1), c("UTP_c", "ADP_c"), c(1,1), "Nucloside diphosphate kinase (UTP-ATP)_c")
 cytosolic.stoi <- add.reaction(cytosolic.stoi, "H2O_c", 1, c("OH-_c", "H+_c"), c(1,1), "Water dissociation_c")
 cytosolic.stoi <- add.reaction(cytosolic.stoi, c("H2O_c", "ATP_c"), c(1,1), c("Phosphate_c", "ADP_c", "H+_c"), c(1,1,1), "ATPase_c")
+cytosolic.stoi <- add.reaction(cytosolic.stoi, c("H+_c", "Nicotinamide adenine dinucleotide phosphate - reduced_c", "Acetyl-ACP_c", "Malonyl-[acyl-carrier protein]_c"), c(21, 14, 1, 7), c("H2O_c", "CO2_c", "Nicotinamide adenine dinucleotide phosphate_c", "acyl carrier protein_c", "Palmitoyl-ACP (n-C16:0ACP)_c"), c(7, 7, 14, 7, 1), "palmitoyl-ACP synthesis")
+
 
 
 mitochondrial.stoi <- add.reaction(mitochondrial.stoi, c("Palmitoylcarnitine_m", "Coenzyme A_m"), c(1,1), c("Carnitine_m", "Palmitoyl-CoA (n-C16:0CoA)_m"), c(1,1), "Palmitoylcarnitine breakdown_m")
@@ -47,7 +47,7 @@ c(1, 7, 7, 7, 7), c("Flavin adenine dinucleotide reduced_m", "Nicotinamide adeni
 "Palmitoyl-CoA catabolism_m")
 mitochondrial.stoi <- add.reaction(mitochondrial.stoi, c("Succinyl-CoA_m", "Phosphate_m", "GDP_m"), c(1,1,1), c("Succinate_m", "Coenzyme A_m", "GTP_m"), c(1,1,1), "Succinyl CoA synthetase_m")
 mitochondrial.stoi <- add.reaction(mitochondrial.stoi, "H2O_m", 1, c("OH-_m", "H+_m"), c(1,1), "Water dissociation_m")
-
+mitochondrial.stoi <- add.reaction(mitochondrial.stoi, c("H2O_m", "CO2_m"), c(1,1), c("H+_m", "Bicarbonate_m"), c(1,1), "Bicarbonate equilibrium_m")
 
 joint.stoi <- cbind(rbind(cytosolic.stoi, matrix(data = 0, ncol = length(cytosolic.stoi[1,]), nrow = length(mitochondrial.stoi[,1]))), rbind(matrix(data = 0, ncol = length(mitochondrial.stoi[1,]), nrow = length(cytosolic.stoi[,1])), mitochondrial.stoi))
 rownames(joint.stoi) <- c(rownames(cytosolic.stoi), rownames(mitochondrial.stoi))
@@ -56,7 +56,7 @@ colnames(joint.stoi) <- c(colnames(cytosolic.stoi), colnames(mitochondrial.stoi)
 joint.stoi <- add.reaction(joint.stoi, "Trehalose_c", 1, NULL, NULL, "Trehalose usage")
 joint.stoi <- add.reaction(joint.stoi, "glycogen_c", 1, NULL, NULL, "Glycogen usage")
 joint.stoi <- add.reaction(joint.stoi, "Hexadecanoate (n-C16:0)_c", 1, NULL, NULL, "Palmitate usage")
-joint.stoi <- add.reaction(joint.stoi, "alpha-D-Ribose 5-phosphate_c", 1, NULL, NULL, "Ribose biosynthesis")
+#joint.stoi <- add.reaction(joint.stoi, "alpha-D-Ribose 5-phosphate_c", 1, NULL, NULL, "Ribose biosynthesis")
 joint.stoi <- add.reaction(joint.stoi, "CO2_c", 1, NULL, NULL , "CO2 leaving")
 joint.stoi <- add.reaction(joint.stoi, NULL, NULL, "O2_c", 1, "O2 entering")
 
@@ -75,6 +75,8 @@ joint.stoi <- add.reaction(joint.stoi, "H2O_c", 1, "H2O_m", 1, "Water transport"
 joint.stoi <- add.reaction(joint.stoi, "O2_c", 1, "O2_m", 1, "Oxygen transport")
 joint.stoi <- add.reaction(joint.stoi, "CO2_m", 1, "CO2_c", 1, "Carbon dioxide transport")
 joint.stoi <- add.reaction(joint.stoi, "H2O_c", 1, NULL, NULL, "Water boundary")
+joint.stoi <- add.reaction(joint.stoi, "Palmitoylcarnitine_c", 1, "Palmitoylcarnitine_m", 1, "palmitoylcarnitine transport")
+
 
 compartment.mets <- list()
 compartment.mets[["c"]] <- c(rownames(cytosolic.stoi), "O2_c")
@@ -157,8 +159,8 @@ is.not.zero = function(vec){
 write.table(write.equations(joint.stoi, compartment.mets, irreversible), file = "meta.rxns.tsv", sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
 
 
-x <- write.equations(joint.stoi, compartment.mets, irreversible)
-rownames(x) <- NULL
+#x <- write.equations(joint.stoi, compartment.mets, irreversible)
+#rownames(x) <- NULL
 
 write.equations <- function(joint.stoi, compartment.mets, irreversible){
 #stoi.mat = n x m stoichiometry matrix, where n is the number of metabolites and m is the number of reactions

@@ -6,11 +6,10 @@ a quadratic programming optimization task.
 
 min  Av = b
 s.t. Sv = 0
-	 Gv < h
-	 
-	 S is drosophila_stoi.R
-	 A specifies the gas-exchange reactions
-	 b is the empirically determined rates of gas-exchange
-	 G specifies bounded fluxes
-	 h specifies the maximal/minimal allowable flux due to experimentally-measured Vmaxes and
-	 reaction irreversibility
+	Gv < h
+
+S is drosophila_stoi.R
+A specifies the gas-exchange reactions
+b is the empirically determined rates of gas-exchange
+G specifies bounded fluxes
+h specifies the maximal/minimal allowable flux due to experimentally-measured Vmaxes and reaction irreversibility

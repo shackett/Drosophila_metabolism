@@ -9,6 +9,8 @@ rownames(line.enzyme) <- as.character(line.enzyme$ln_nam)
 rownames(line.flight) <- as.character(line.flight$ln_nam)
 rownames(line.resp) <- as.character(line.resp$ln_nam)
 line.enzyme <- line.enzyme[,-1]; line.flight <- line.flight[,-1]; line.resp <- line.resp[,-1]
+#flooring enyzme Vmax to 0
+line.enzyme[line.enzyme < 0] <- 0
 
 pop.enzyme <- read.table("MCMC_files/popMat.tsv", sep = "\t", header = TRUE)
 pop.flight <- read.table("MCMC_files/FLTpopMns.tsv", sep = "\t", header = TRUE)
@@ -23,14 +25,25 @@ source("path_length_calc.R")
 source("flimsy_plate_extract.R")
 library(limSolve)
 library(gplots)
+library("colorRamps")
+
+
+##### Specified parameters
+
+#if use.line = TRUE, then the point estimates of lines will be used. otherwise population estimates will be used
+
+use.line = TRUE
+if(use.line == TRUE){
+	valid.samples <- intersect(rownames(line.enzyme), rownames(line.resp))
+	line.enzyme <- line.enzyme[rownames(line.enzyme) %in% valid.samples,]
+	line.resp <- line.resp[rownames(line.resp) %in% valid.samples,]
+	}
 
 ##### a few functions
 
 find.name <- function(kinetic_enzyme, assay_parameters){
 	assay_parameters$Model_name[rownames(assay_parameters) == kinetic_enzyme]
 	}
-
-
 
 ###### Read in and calculate the paramters needed to transform A/s into moles/s using the beer-lambert law and path-length calculated from the well-geometry and volume of a microtiter-assay
 
@@ -47,7 +60,12 @@ if(assay_parameters$molar_absorptivity[i] %in% c(16000, 19100, 11500)){
 	}else{
 assay_parameters$path_length[i] <- find.pl(assay_parameters$assay_volume[i], height_scale, bottom_d)$minimum * 100	}}
 	
-enzymeOD <- pop.enzyme[,((colnames(pop.enzyme) %in% rownames(assay_parameters)))]
+###### Determine sample x reaction Vmax	
+	
+if(use.line == TRUE){
+enzymeOD <- line.enzyme[,((colnames(line.enzyme) %in% rownames(assay_parameters)))]
+	}else{	
+enzymeOD <- pop.enzyme[,((colnames(pop.enzyme) %in% rownames(assay_parameters)))]}
 enzyme_moles_per_second <- enzymeOD
 enzyme_moles_per_second[!is.na(enzyme_moles_per_second)] <- NA
 	
@@ -69,7 +87,9 @@ kinetic_reactions <- unlist(lapply(colnames(kinetic_enzymes), find.name, assay_p
 
 SF <- 1e11
 
-gas_exchange = pop.resp[,c(1:2)]/1e7/22.4/3600
+if(use.line == TRUE){
+gas_exchange = line.resp[,c(1:2)]/1e7/22.4/3600
+}else{gas_exchange = pop.resp[,c(1:2)]/1e7/22.4/3600}
 
 kinetic_enzymes <- kinetic_enzymes * SF
 gas_exchange <- gas_exchange * SF
@@ -80,18 +100,21 @@ S = joint.stoi.red
 f = rep(0, times = length(joint.stoi.red[,1]))
 
 # irreversible reactions
-irreversible = c("Trehalose6P synthetase_c", "Glycogen Synthase_c", "6-phosphogluconate dehydrogenase_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "FADH2 oxidation for proton transport", "NADH oxidation for proton transport", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "Trehalase_c", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "C8 synthesis_c", "Pyruvate dehydrogenase_m", "Phosphofructokinase_c", "Trehalase_c")
-#, "Phosphoglycerate kinase_c", 
+irreversible = c("Trehalose6P synthetase_c", "Trehalose6P phosphatase_c", "Trehalase_c", "Hexokinase_c", "Branching enzyme_c", "Glycogen phosphorylase_c", "Glycogen Synthase_c", "UDP-pyrophosphorylase_c", "Lactonase_c", "6-phosphogluconate dehydrogenase_c", "Phosphofructokinase_c", "Glycerol 3-phosphate shuttle", "Glycerol 3-phosphate dehydrogenase (NAD)_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "ATP synthetase", "NADH oxidation for proton transport", "FADH2 oxidation for proton transport", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "C8 synthesis_c", "Pyruvate dehydrogenase_m", "ATPase_c")
 
 #sample matricies: kinetic_enzymes & gas_exchange
 
 #iterate through all samples
+nsamples <- length(kinetic_enzymes[,1])
 
-pop.fluxes <- matrix(NA, nrow = length(S[1,]), ncol = 5)
-rownames(pop.fluxes) <- colnames(S)
-colnames(pop.fluxes) <- rownames(kinetic_enzymes)
+calc.fluxes <- matrix(NA, nrow = length(S[1,]), ncol = nsamples)
+rownames(calc.fluxes) <- colnames(S)
+colnames(calc.fluxes) <- rownames(kinetic_enzymes)
+optim.resid <- rep(NA, times = nsamples)
 
-for (line in c(1:5)){
+#line <- c(1:nsamples)[rownames(kinetic_enzymes) %in% "B43"]
+
+for (line in c(1:nsamples)){
 
 #reactions corresponding to each measured Vmax
 
@@ -102,8 +125,6 @@ for (i in 1:length(kinetic_enzymes[1,])){
 	H_flux[i] <- -1*kinetic_enzymes[line,i]
 	}
 G_flux <- t(G_flux)
-
-
 
 G_irr = matrix(data = NA, ncol = length(irreversible), nrow = length(joint.stoi.red[1,]))
 for (i in 1:length(irreversible)){
@@ -125,19 +146,21 @@ for (i in 1:length(exchange_rxns)){
 	}
 u = gas_exchange[line,c(1,2)]
 
-
-pop.fluxes[,line] <- lsei(A = t(A), B = t(u), E = S, F = f, G = G, H = h)$X
+QP.optim <- lsei(A = t(A), B = t(u), E = S, F = f, G = G, H = h)
+calc.fluxes[,line] <- QP.optim$X
+optim.resid[line] <- QP.optim$residualNorm
 }
 
-nonzero.pop.flux <- pop.fluxes[apply(pop.fluxes == 0, 1, sum) != length(pop.fluxes[1,]),]
-heatmap.2(nonzero.pop.flux - apply(nonzero.pop.flux, 1, mean))/apply(nonzero.pop.flux, 1, sd)
+nonzero.flux <- calc.fluxes[apply(calc.fluxes == 0, 1, sum) != length(calc.fluxes[1,]),]
+heatmap.2((nonzero.flux - apply(nonzero.flux, 1, mean))/apply(nonzero.flux, 1, sd), trace = "none", col = blue2yellow(100), cexRow = 0.05 + 0.8/log10(length(nonzero.flux[,1])))
 
+calc.fluxes[rownames(calc.fluxes) %in% c("CO2 leaving", "O2 entering"),optim.resid > 0.0001]
 
-
-
+line.resp[optim.resid > 0.0001,]/1e7/22.4/3600*SF
+line.enzyme[optim.resid > 0.0001,]
                                
 
-
+zero.flux <- colnames(S)[apply(calc.fluxes == 0, 1, sum) == length(calc.fluxes[1,])]
 
 
 
