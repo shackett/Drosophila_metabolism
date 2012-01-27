@@ -13,3 +13,19 @@ A specifies the gas-exchange reactions
 b is the empirically determined rates of gas-exchange
 G specifies bounded fluxes
 h specifies the maximal/minimal allowable flux due to experimentally-measured Vmaxes and reaction irreversibility
+
+
+
+
+
+
+
+For older code:
+
+resp8.1 - 
+gases are in 10^-7 liters per fly-hour
+flight -
+units are standard, m/s, m/s2 ...
+enzyme kinetics -
+units are OD/s, converted to moles/s using beer-lambert and then corrected for the fraction of
+the fly extract that goes into an assay plate (i.e. mmoles/s per 1/50th of a set of 5 flies)
