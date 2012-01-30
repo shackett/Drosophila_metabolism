@@ -76,6 +76,34 @@ joint.stoi <- add.reaction(joint.stoi, "O2_c", 1, "O2_m", 1, "Oxygen transport")
 joint.stoi <- add.reaction(joint.stoi, "CO2_m", 1, "CO2_c", 1, "Carbon dioxide transport")
 joint.stoi <- add.reaction(joint.stoi, "H2O_c", 1, NULL, NULL, "Water boundary")
 joint.stoi <- add.reaction(joint.stoi, "Palmitoylcarnitine_c", 1, "Palmitoylcarnitine_m", 1, "palmitoylcarnitine transport")
+joint.stoi <- add.reaction(joint.stoi, "Carnitine_m", 1, "Carnitine_c", 1, "Carnitine transport")
+
+Carnitine
+
+
+#rename some compounds with common names
+
+replacements <- data.frame(c("Nicotinamide adenine dinucleotide phosphate - reduced", "NADPH"), c("Nicotinamide adenine dinucleotide phosphate", "NADP+"), c("Nicotinamide adenine dinucleotide - reduced", "NADH"), c("Nicotinamide adenine dinucleotide", "NAD+"), c("Coenzyme A", "CoA"), c("acyl carrier protein", "ACP"), c("Flavin adenine dinucleotide oxidized", "FAD"), c("Flavin adenine dinucleotide reduced", "FADH2"), c("acyl-carrier protein", "ACP"))
+
+for(rep in 1:length(replacements[1,])){
+	rownames(joint.stoi) <- sub(as.character(replacements[1,rep]), as.character(replacements[2,rep]), rownames(joint.stoi))
+	}
+
+### flip reaction products and reactants
+
+reactions <- c("Phosphoglycerate kinase_c", "Phosphoglycerate mutase_c")
+
+flip.rxn <- function(reactions, joint.stoi){
+	stoi <- joint.stoi
+	stoi[,colnames(joint.stoi) %in% reactions] <- stoi[,colnames(joint.stoi) %in% reactions]*-1
+	stoi
+	}
+
+joint.stoi <- flip.rxn(reactions, joint.stoi)
+
+
+
+
 
 
 compartment.mets <- list()
