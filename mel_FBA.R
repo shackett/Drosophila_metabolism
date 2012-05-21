@@ -6,7 +6,7 @@ setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
 use.line = TRUE
 #if use.flight == TRUE, then the goal is to match the rate of ATP consumption needed to match the maximum flight velocity
 #if use.flight == FALSE, then the goal is to match rates of O2 consumption and CO2 production
-use.flight = TRUE
+use.flight = FALSE
 
 if(use.line == TRUE){
 
@@ -14,13 +14,14 @@ line.enzyme <- read.table("MCMC_files/lnMat.tsv", sep = "\t", header = TRUE)
 line.flight <- read.table("MCMC_files/FLTlnMns.tsv", sep = "\t", header = TRUE)
 rownames(line.enzyme) <- as.character(line.enzyme$ln_nam)
 rownames(line.flight) <- as.character(line.flight$ln_nam)
-line.enzyme <- line.enzyme[,-1]; line.flight <- line.flight[,-1]; line.resp <- line.resp[,-1]
+line.enzyme <- line.enzyme[,-1]
 #setting negative vmax values to 0
 line.enzyme[line.enzyme < 0] <- 0
 
 if(use.flight == FALSE){
 line.resp <- read.table("MCMC_files/RESPlnMns.tsv", sep = "\t", header = TRUE)
 rownames(line.resp) <- as.character(line.resp$ln_nam)
+line.resp <- line.resp[,-1]	
 	}
 if(use.flight == TRUE){
 flightM <- read.table("MCMC_files/FLTlnMns.tsv", sep = "\t", header = TRUE)
@@ -32,14 +33,13 @@ rownames(line.flight) <- flightM$"ln_nam"
 if(use.line == FALSE){
 
 pop.enzyme <- read.table("MCMC_files/popMat.tsv", sep = "\t", header = TRUE)
-pop.flight <- read.table("MCMC_files/FLTpopMns.tsv", sep = "\t", header = TRUE)
 rownames(pop.enzyme) <- as.character(pop.enzyme$pop_nam)
-rownames(pop.flight) <- as.character(pop.flight$pop_nam)
-pop.enzyme <- pop.enzyme[,-1]; pop.flight <- pop.flight[,-1]; pop.resp <- pop.resp[,-1]
+pop.enzyme <- pop.enzyme[,-1]
 
 if(use.flight == FALSE){
 pop.resp <- read.table("MCMC_files/RESPpopMns.tsv", sep = "\t", header = TRUE)
 rownames(pop.resp) <- as.character(pop.resp$pop_nam)
+pop.resp <- pop.resp[,-1]
 	}
 if(use.flight == TRUE){
 flightM <- read.table("MCMC_files/FLTpopMns.tsv", sep = "\t", header = TRUE)
@@ -128,7 +128,8 @@ for (i in 1:length(enzyme_moles_per_second[1,])){
 	if(params$molar_absorptivity != "STD"){
 	params$molar_absorptivity <- as.numeric(params$molar_absorptivity)
 	
-	enzyme_moles_per_second[,i] <- (((enzymeOD[,i]/(params$molar_absorptivity*params$path_length))*params$assay_volume*(params$assay_volume/20e-6))/params$OD_scaling)/params$fly_fraction
+	enzyme_moles_per_second[,i] <- ((((enzymeOD[,i]*params$assay_volume)/(params$molar_absorptivity*params$path_length))/params$OD_scaling)/params$fly_fraction)*params$Moles_of_absorbant*(ifelse(use.line == TRUE, line.enzyme$wts, pop.enzyme$wts))
+	
 	}}
 
 kinetic_enzymes = enzyme_moles_per_second[,apply(is.na(enzyme_moles_per_second), 2, sum) == 0]
@@ -145,9 +146,9 @@ vel.pow.corr <- data.frame(advance.ratio = c(0, 0.13, 0.27, 0.40, 0.53), velocit
 #60W/kg for mel hovering flight
 
 #Tran and Unden 1998
-#46.5kJ/mol
+#46.5kJ/mole
 
-#for melanogaster, 0.85 velocity, advance ratio 0.32
+#for melanogaster, 0.85 velocity, advance ratio 0.32, gives us the scaling between advance ratio and velocity
 
 #scale virilis velocity = f(advance ratio) to melanogaster
 vel.pow.corr$velocity.mel <- vel.pow.corr$velocity.virilis*(0.85/((2/0.53)*0.32))
@@ -160,22 +161,24 @@ power.lm <- lm(vel.pow.corr$power.mel ~ vel.pow.corr$velocity.mel + I(vel.pow.co
 degree <- length(power.lm$coef)-1
 
 velocities <- seq(0, 1.5, by = 0.05)
-fit.velocity <- velocity.to.power(velocity.vector, power.lm)
+fit.velocity <- velocity.to.power(velocities, power.lm)
 
 #get total power from efficiency of conversion and weight
 #gives Watts: J/s per fly
 if(use.flight == TRUE){
-plot(fit.velocity ~ velocities, type = "l")
+pdf(file = "flight_vel.pdf")
+plot(fit.velocity ~ velocities, type = "l", ylab = "Power (W)")
 if(use.line == TRUE){
-power <- (velocity.to.power(as.numeric(unlist(line.flight)), power.lm)/0.1)*(line.enzyme$wts*10^-6/5)
+power.mech <- (velocity.to.power(as.numeric(unlist(line.flight)), power.lm)/0.1)*(line.enzyme$wts*10^-6/5)
 points(velocity.to.power(as.numeric(unlist(line.flight)), power.lm) ~ unlist(line.flight), pch = 8, col = "RED")
 	}else{
-	power <- (velocity.to.power(as.numeric(unlist(pop.flight)), power.lm)/0.1)*(pop.enzyme$wts*10^-6/5)
+	power.mech <- (velocity.to.power(as.numeric(unlist(pop.flight)), power.lm)/0.1)*(pop.enzyme$wts*10^-6/5)
 	points(velocity.to.power(as.numeric(unlist(pop.flight)), power.lm) ~ unlist(pop.flight), pch = 8, col = "RED")
 		}
+dev.off()
 
 #46500 J per mole ATP (and making the flux for 5 flies again)
-ATP.consumed <- (power/46500)*5
+ATP.consumed <- (power.mech/46500)*5
 
 }
 
@@ -208,10 +211,10 @@ f = rep(0, times = length(joint.stoi.red[,1]))
 
 #respirometry - irreversible reactions
 if(use.flight == FALSE){
-irreversible = c("Trehalose6P synthetase_c", "Trehalose6P phosphatase_c", "Trehalase_c", "Hexokinase_c", "Branching enzyme_c", "Glycogen phosphorylase_c", "Glycogen Synthase_c", "UDP-pyrophosphorylase_c", "Lactonase_c", "6-phosphogluconate dehydrogenase_c", "Phosphofructokinase_c", "Glycerol 3-phosphate shuttle", "Glycerol 3-phosphate dehydrogenase (NAD)_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "ATP synthetase", "NADH oxidation for proton transport", "FADH2 oxidation for proton transport", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "C8 synthesis_c", "Pyruvate dehydrogenase_m", "ATPase_c", "fructose 1,6 bisphosphatase_c")
+irreversible = c("Trehalose6P synthetase_c", "Trehalose6P phosphatase_c", "Trehalase_c", "Hexokinase_c", "Branching enzyme_c", "Glycogen phosphorylase_c", "Glycogen Synthase_c", "UDP-pyrophosphorylase_c", "Lactonase_c", "6-phosphogluconate dehydrogenase_c", "Phosphofructokinase_c", "Glycerol 3-phosphate shuttle", "Glycerol 3-phosphate dehydrogenase (NAD)_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "ATP synthetase", "NADH oxidation for proton transport", "FADH2 oxidation for proton transport", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "C8 synthesis_c", "Pyruvate dehydrogenase_m", "ATPase_c", "Peroxide generation")
 }else{
 #flight-flux constraints
-irreversible = c("Trehalose6P phosphatase_c", "Hexokinase_c", "Branching enzyme_c", "Lactonase_c", "6-phosphogluconate dehydrogenase_c", "Phosphofructokinase_c", "Glycerol 3-phosphate shuttle", "Glycerol 3-phosphate dehydrogenase (NAD)_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "ATP synthetase", "NADH oxidation for proton transport", "FADH2 oxidation for proton transport", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "C8 synthesis_c", "Pyruvate dehydrogenase_m", "ATPase_c", "fructose 1,6 bisphosphatase_c")
+irreversible = c("Trehalose6P phosphatase_c", "Hexokinase_c", "Branching enzyme_c", "Lactonase_c", "6-phosphogluconate dehydrogenase_c", "Phosphofructokinase_c", "Glycerol 3-phosphate shuttle", "Glycerol 3-phosphate dehydrogenase (NAD)_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "ATP synthetase", "NADH oxidation for proton transport", "FADH2 oxidation for proton transport", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "Pyruvate dehydrogenase_m", "ATPase_c", "fructose 1,6 bisphosphatase_c")
 }
 #sample matricies: kinetic_enzymes & gas_exchange
 
@@ -229,17 +232,22 @@ for (line in c(1:nsamples)){
 
 #reactions corresponding to each measured Vmax
 
+
+
 G_flux <- matrix(data = NA, ncol = length(kinetic_enzymes[1,]), nrow = length(joint.stoi.red[1,])) 
 H_flux <- rep(NA, times = length(kinetic_enzymes[1,]))
 for (i in 1:length(kinetic_enzymes[1,])){
-	G_flux[,i] <- ifelse(colnames(joint.stoi.red) == kinetic_reactions[i], -1, 0)
-	H_flux[i] <- -1*kinetic_enzymes[line,i]
+	if(kinetic_reactions[i] %in% "Succinate dehydrogenase_m"){
+		G_flux[,i] <- ifelse(colnames(joint.stoi.red) == kinetic_reactions[i], -1, 0)
+		H_flux[i] <- -1*kinetic_enzymes[line,i]*10
+		}else{
+		G_flux[,i] <- ifelse(colnames(joint.stoi.red) == kinetic_reactions[i], -1, 0)
+		H_flux[i] <- -1*kinetic_enzymes[line,i]}
 	#exception for bidirectional vmax measurements
 	if(kinetic_reactions[i] %in% c("Malate dehydrogenase_m", "Phosphoglucomutase_c")){
 		G_flux <- cbind(G_flux, ifelse(colnames(joint.stoi.red) == kinetic_reactions[i], 1, 0))
 		H_flux <- c(H_flux, -1*kinetic_enzymes[line,i])
-		}
-	}
+	}}
 G_flux <- t(G_flux)
 
 G_irr = matrix(data = NA, ncol = length(irreversible), nrow = length(joint.stoi.red[1,]))
@@ -252,10 +260,12 @@ H_irr = rep(0, times = length(irreversible))
 G <- rbind(G_flux, G_irr)
 h <- c(H_flux, H_irr)
 
-#for flight, remove palmitate as an energy source
+#for flight, fatty acid synthesis and the pentose pathway are disabled, consistent with published observations
 if(use.flight == TRUE){
 	G <- rbind(G, ifelse(colnames(joint.stoi.red) == "Palmitate usage", -1, 0), ifelse(colnames(joint.stoi.red) == "Palmitate usage", 1, 0))
-	h <- c(h, 0, 0)
+	G <- rbind(G, ifelse(colnames(joint.stoi.red) == "Glucose 6-phosphate dehydrogenase_c", -1, 0), ifelse(colnames(joint.stoi.red) == "Glucose 6-phosphate dehydrogenase_c", 1, 0))
+	G <- rbind(G, ifelse(colnames(joint.stoi.red) == "Palmitoyl-ACP synthesis_c", -1, 0), ifelse(colnames(joint.stoi.red) == "Palmitoyl-ACP synthesis_c", 1, 0))
+	h <- c(h, 0, 0, 0, 0, 0, 0)
 	}
 #colnames(G) <- colnames(S)
 
@@ -281,24 +291,29 @@ u = gas_exchange[line,c(1,2)]
 		}
 
 
-#also maximize ATP production
-#A = cbind(A, ifelse(colnames(joint.stoi.red) == "ATPase_c", 1, 0))
-#u = c(unlist(u), 10)
+if(use.flight == FALSE){
+	QP.optim <- lsei(A = t(A), B = t(u), E = S, F = f, G = G, H = h)
+	calc.fluxes[,line] <- QP.optim$X
+	optim.resid[line] <- QP.optim$solutionNorm
+	}
 
-#QP.optim <- lsei(A = t(A), B = t(u), E = S, F = f, G = G, H = h)
-#calc.fluxes[,line] <- QP.optim$X
-#optim.resid[line] <- QP.optim$solutionNorm
-
-calc.fluxes[,line] <- linp(E = S, F = f, G = G, H = h, Cost = -1*(A[,1] - A[,2] - A[,3]), ispos = FALSE)$X
-
+if(use.flight == TRUE){
+	LP.optim <- linp(E = S, F = f, G = G, H = h, Cost = -1*(A[,1] - A[,2] - A[,3]), ispos = FALSE)
+	calc.fluxes[,line] <- LP.optim$X
+	optim.resid[line] <- LP.optim$X[names(LP.optim$X) == "ATPase_c"]/ATP.consumed[line]
+	}
 }
 
-nonzero.flux <- calc.fluxes[apply(calc.fluxes == 0, 1, sum) != length(calc.fluxes[1,]),]
+valid.sample <- !(colnames(calc.fluxes) %in% "N13")
+
+nonzero.flux <- calc.fluxes[apply(calc.fluxes[,valid.sample] == 0, 1, sum) != length(calc.fluxes[1, valid.sample]),]
+
+###### fix me
 
 if(use.line == TRUE){pdf(file = "line_flux.pdf")}else{pdf(file = "pop_flux.pdf")}
 
 if(use.line == TRUE){
-heatmap.2((nonzero.flux - apply(nonzero.flux, 1, mean))/apply(nonzero.flux, 1, sd), trace = "none", col = blue2yellow(100), ColSideColors = line.color, cexCol = 0.4, cexRow = 0.05 + 0.8/log10(length(nonzero.flux[,1])))
+heatmap.2((nonzero.flux[,valid.sample] - apply(nonzero.flux[,valid.sample], 1, mean))/apply(nonzero.flux[,valid.sample], 1, sd), trace = "none", col = blue2yellow(100), ColSideColors = line.color[valid.sample], cexCol = 0.4, cexRow = 0.05 + 0.8/log10(length(nonzero.flux[,1])))
 	}else{
 heatmap.2((nonzero.flux - apply(nonzero.flux, 1, mean))/apply(nonzero.flux, 1, sd), trace = "none", col = blue2yellow(100), cexRow = 0.05 + 0.8/log10(length(nonzero.flux[,1])))
 	}
@@ -311,16 +326,21 @@ zero.flux <- colnames(S)[apply(calc.fluxes == 0, 1, sum) == length(calc.fluxes[1
 
 if(use.line == TRUE){
 
-plot(log((svd(nonzero.flux, nu = 1, nv = 1)$d^2/sum(svd(nonzero.flux, nu = 2, nv = 2)$d^2))), main = "Variance explained by each PC (ln)", ylab = "log(proportion of variance explained by PC)")
+pca_std <- nonzero.flux; pca_std <- t(scale(t(pca_std), center = TRUE, scale = TRUE))
+
+plot(((svd(pca_std, nu = 1, nv = 1)$d^2/sum(svd(pca_std, nu = 2, nv = 2)$d^2))), main = "Variance explained by each PC (ln)", ylab = "log(proportion of variance explained by PC)")
 n.components <- 4
-	
+
 for (pc in 1:n.components){
 	
-plot(svd(nonzero.flux, nu = n.components, nv = n.components)$v[,pc], col = line.color, main = paste("Principle Component ", pc, sep = ""), xlab = paste("PC ", pc, sep = ""), ylab = "PC value", pch = 8, cex = 1.2)
+plot(svd(pca_std, nu = n.components, nv = n.components)$v[,pc], col = line.color, main = paste("Principle Component ", pc, sep = ""), xlab = paste("PC ", pc, sep = ""), ylab = "PC value", pch = 8, cex = 1.2)
 legend("topleft", legend = pop.color[,3], text.col = as.character(pop.color[,2]))
 	
-	
 	}}; dev.off()
+
+
+
+
 
 #### for measured enzymes, determine v / vmax
 
