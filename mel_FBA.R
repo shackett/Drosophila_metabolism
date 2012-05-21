@@ -308,7 +308,6 @@ valid.sample <- !(colnames(calc.fluxes) %in% "N13")
 
 nonzero.flux <- calc.fluxes[apply(calc.fluxes[,valid.sample] == 0, 1, sum) != length(calc.fluxes[1, valid.sample]),]
 
-###### fix me
 
 if(use.line == TRUE){pdf(file = "line_flux.pdf")}else{pdf(file = "pop_flux.pdf")}
 
@@ -321,24 +320,27 @@ heatmap.2((nonzero.flux - apply(nonzero.flux, 1, mean))/apply(nonzero.flux, 1, s
 
 #(line.resp[optim.resid > 0.0001,]/1e7/22.4/3600)*SF*5
 #line.enzyme[optim.resid > 0.0001,]
-                               
+            
+n.components <- 2                          
 zero.flux <- colnames(S)[apply(calc.fluxes == 0, 1, sum) == length(calc.fluxes[1,])]
+pc_corr <- data.frame(cotcorr = rep(NA, times = n.components), Otcorr = rep(NA, times = n.components), RQcorr = rep(NA, times = n.components))
 
 if(use.line == TRUE){
 
 pca_std <- nonzero.flux; pca_std <- t(scale(t(pca_std), center = TRUE, scale = TRUE))
+gas_corr_samples <- gas_exchange[sapply(colnames(pca_std), function(x){c(1:length(gas_exchange[,1]))[rownames(gas_exchange) == x]}),]
+gas_corr_samples <- cbind(gas_corr_samples, RQ = gas_corr_samples$Vcot/gas_corr_samples$Vox)
 
 plot(((svd(pca_std, nu = 1, nv = 1)$d^2/sum(svd(pca_std, nu = 2, nv = 2)$d^2))), main = "Variance explained by each PC (ln)", ylab = "log(proportion of variance explained by PC)")
-n.components <- 4
 
 for (pc in 1:n.components){
 	
 plot(svd(pca_std, nu = n.components, nv = n.components)$v[,pc], col = line.color, main = paste("Principle Component ", pc, sep = ""), xlab = paste("PC ", pc, sep = ""), ylab = "PC value", pch = 8, cex = 1.2)
 legend("topleft", legend = pop.color[,3], text.col = as.character(pop.color[,2]))
-	
+
+pc_corr[pc,] <- apply(gas_corr_samples, 2, function(x){cor(x, svd(pca_std, nu = n.components, nv = n.components)$v[,pc])})
+
 	}}; dev.off()
-
-
 
 
 
@@ -354,6 +356,11 @@ kinetic_enzymes[kinetic_enzymes == 0] <- NA
 
 Vmax.fraction <- od.measured.carried.flux/kinetic_enzymes
 
+vmax.frac.mat <- scale(Vmax.fraction, center = FALSE, scale = TRUE); vmax.frac.mat <- abs(vmax.frac.mat[,!is.nan(vmax.frac.mat[1,])])
+vmax.frac.mat[rownames(vmax.frac.mat) != "N13",]
+
+heatmap.2(scale(Vmax.fraction, center = TRUE, scale = TRUE))
+
 if(use.line == TRUE){
 	write.table(calc.fluxes, file = "line_fluxes.tsv", sep = "\t")
 	write.table(Vmax.fraction, file = "line_vmax_fraction.tsv", sep = "\t")
@@ -361,3 +368,18 @@ if(use.line == TRUE){
 		write.table(calc.fluxes, file = "pop_fluxes.tsv", sep = "\t")
 		write.table(Vmax.fraction, file = "pop_vmax_fraction.tsv", sep = "\t")
 		}
+		
+#visualizing flux results using Rcytoscape bridge to cytoscape
+
+
+
+
+
+
+
+
+
+		
+		
+		
+		
