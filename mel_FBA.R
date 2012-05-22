@@ -2,14 +2,25 @@
 
 setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
 
+load("drosophila_stoi.R")
+source("path_length_calc.R")
+source("flimsy_plate_extract.R")
+library(limSolve)
+library(gplots)
+library("colorRamps")
+
 #if use.line == TRUE, then the point estimates of lines will be used. otherwise population estimates will be used
 use.line = TRUE
 #if use.flight == TRUE, then the goal is to match the rate of ATP consumption needed to match the maximum flight velocity
 #if use.flight == FALSE, then the goal is to match rates of O2 consumption and CO2 production
-use.flight = TRUE
+use.flight = FALSE
+#if use.mcmc == TRUE, then FBA will be done on all sample within a matrix
+use.mcmc = TRUE
 
+if(use.mcmc == FALSE){
+	
+#using only a single sample
 if(use.line == TRUE){
-
 line.enzyme <- read.table("MCMC_files/lnMat.tsv", sep = "\t", header = TRUE)
 line.flight <- read.table("MCMC_files/FLTlnMns.tsv", sep = "\t", header = TRUE)
 rownames(line.enzyme) <- as.character(line.enzyme$ln_nam)
@@ -46,14 +57,19 @@ flightM <- read.table("MCMC_files/FLTpopMns.tsv", sep = "\t", header = TRUE)
 pop.flight <- data.frame(maxVel = flightM[,colnames(flightM) %in% "maxv"])
 rownames(pop.flight) <- flightM$"pop_nam"
 	}
-}
+}}else{
+	#using mcmc samples
+	
+	mcmc_files <- list.files("resp_MCMC")[grep(ifelse(use.flight, "FLT", "RESP"), list.files("resp_MCMC"))]
+	mcmc_matrix <- NULL
+	for(mcmc_file in mcmc_files){
+		source(paste("resp_MCMC/", mcmc_file, sep = ""))
+		mcmc_matrix <- rbind(mcmc_matrix, get(ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())]))
+		rm(list = ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())])
+		}
+	}
 
-load("drosophila_stoi.R")
-source("path_length_calc.R")
-source("flimsy_plate_extract.R")
-library(limSolve)
-library(gplots)
-library("colorRamps")
+
 
 if(use.line == TRUE){
 	if(use.flight == FALSE){
@@ -84,19 +100,6 @@ if(use.line == TRUE){
 
 
 
-
-
-##### a few functions
-
-find.name <- function(kinetic_enzyme, assay_parameters){
-	assay_parameters$Model_name[rownames(assay_parameters) == kinetic_enzyme]
-	}
-
-velocity.to.power <- function(velocity.vector, power.lm){
-degree = length(power.lm$coef)-1
-apply(matrix(power.lm$coef, ncol = degree +1, nrow = length(velocity.vector), byrow = TRUE)*(matrix(velocity.vector, ncol = degree +1, nrow = length(velocity.vector), byrow = FALSE)^matrix((0:(length(power.lm$coef)-1)), ncol = degree +1, nrow = length(velocity.vector), byrow = TRUE)), 1, sum)}
-
-
 ###### Read in and calculate the paramters needed to transform A/s into moles/s using the beer-lambert law and path-length calculated from the well-geometry and volume of a microtiter-assay
 
 assay_parameters <- read.table("kin_par.csv", sep = ",", header = TRUE, colClasses = c("character", "numeric", "character", "numeric", "numeric", "numeric", "character"))
@@ -106,11 +109,28 @@ assay_parameters <- cbind(assay_parameters, data.frame(path_length = NA))
 
 for(i in 1:length(assay_parameters[,1])){
 
-#If assay is visible then use a different type of plate is used
+#If assay is visible then a different type of plate is used
 if(assay_parameters$molar_absorptivity[i] %in% c(16000, 19100, 11500)){
 	assay_parameters$path_length[i] <- flimsy_pl(assay_parameters$assay_volume[i]*1e6)
 	}else{
 assay_parameters$path_length[i] <- find.pl(assay_parameters$assay_volume[i], height_scale, bottom_d)$minimum * 100	}}
+
+####### Rxns corresponding to rows of G and stoichiometry are defined ############
+
+joint.stoi.red <- joint.stoi
+S = joint.stoi.red
+f = rep(0, times = length(joint.stoi.red[,1]))
+
+#respirometry - irreversible reactions
+if(use.flight == FALSE){
+irreversible = c("Trehalose6P synthetase_c", "Trehalose6P phosphatase_c", "Trehalase_c", "Hexokinase_c", "Branching enzyme_c", "Glycogen phosphorylase_c", "Glycogen Synthase_c", "UDP-pyrophosphorylase_c", "Lactonase_c", "6-phosphogluconate dehydrogenase_c", "Phosphofructokinase_c", "Glycerol 3-phosphate shuttle", "Glycerol 3-phosphate dehydrogenase (NAD)_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "ATP synthetase", "NADH oxidation for proton transport", "FADH2 oxidation for proton transport", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "C8 synthesis_c", "Pyruvate dehydrogenase_m", "ATPase_c", "Peroxide generation")
+}else{
+#flight-flux constraints
+irreversible = c("Trehalose6P phosphatase_c", "Hexokinase_c", "Branching enzyme_c", "Lactonase_c", "6-phosphogluconate dehydrogenase_c", "Phosphofructokinase_c", "Glycerol 3-phosphate shuttle", "Glycerol 3-phosphate dehydrogenase (NAD)_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "ATP synthetase", "NADH oxidation for proton transport", "FADH2 oxidation for proton transport", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "Pyruvate dehydrogenase_m", "ATPase_c", "fructose 1,6 bisphosphatase_c")
+}
+
+
+
 	
 ###### Determine sample x reaction Vmax	
 	
@@ -179,7 +199,6 @@ dev.off()
 
 #46500 J per mole ATP (and making the flux for 5 flies again)
 ATP.consumed <- (power.mech/46500)*5
-
 }
 
 
@@ -204,18 +223,7 @@ gas_exchange <- gas_exchange * SF
 
 kinetic_enzymes <- kinetic_enzymes * SF
 
-joint.stoi.red <- joint.stoi
-	
-S = joint.stoi.red
-f = rep(0, times = length(joint.stoi.red[,1]))
 
-#respirometry - irreversible reactions
-if(use.flight == FALSE){
-irreversible = c("Trehalose6P synthetase_c", "Trehalose6P phosphatase_c", "Trehalase_c", "Hexokinase_c", "Branching enzyme_c", "Glycogen phosphorylase_c", "Glycogen Synthase_c", "UDP-pyrophosphorylase_c", "Lactonase_c", "6-phosphogluconate dehydrogenase_c", "Phosphofructokinase_c", "Glycerol 3-phosphate shuttle", "Glycerol 3-phosphate dehydrogenase (NAD)_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "ATP synthetase", "NADH oxidation for proton transport", "FADH2 oxidation for proton transport", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "C8 synthesis_c", "Pyruvate dehydrogenase_m", "ATPase_c", "Peroxide generation")
-}else{
-#flight-flux constraints
-irreversible = c("Trehalose6P phosphatase_c", "Hexokinase_c", "Branching enzyme_c", "Lactonase_c", "6-phosphogluconate dehydrogenase_c", "Phosphofructokinase_c", "Glycerol 3-phosphate shuttle", "Glycerol 3-phosphate dehydrogenase (NAD)_c", "Phosphoenolpyruvate carboxylase_c", "Pyrophosphatase_c", "Isocitrate dehydrogenase (NADP)_m", "Isocitrate dehydrogenase (NADP)_m", "Alpha-ketoglutarate dehydrogenase I_m", "ATP synthetase", "NADH oxidation for proton transport", "FADH2 oxidation for proton transport", "Malic enzyme (NADP)_c", "Malic enzyme (NAD)_c", "Pyruvate dehydrogenase_m", "ATPase_c", "fructose 1,6 bisphosphatase_c")
-}
 #sample matricies: kinetic_enzymes & gas_exchange
 
 #iterate through all samples
@@ -226,13 +234,10 @@ rownames(calc.fluxes) <- colnames(S)
 colnames(calc.fluxes) <- rownames(kinetic_enzymes)
 optim.resid <- rep(NA, times = nsamples)
 
-#line <- c(1:nsamples)[rownames(kinetic_enzymes) %in% "N15"]
 
 for (line in c(1:nsamples)){
 
 #reactions corresponding to each measured Vmax
-
-
 
 G_flux <- matrix(data = NA, ncol = length(kinetic_enzymes[1,]), nrow = length(joint.stoi.red[1,])) 
 H_flux <- rep(NA, times = length(kinetic_enzymes[1,]))
@@ -388,7 +393,15 @@ if(use.line == TRUE){
 
 
 
+##### a few functions
 
+find.name <- function(kinetic_enzyme, assay_parameters){
+	assay_parameters$Model_name[rownames(assay_parameters) == kinetic_enzyme]
+	}
+
+velocity.to.power <- function(velocity.vector, power.lm){
+degree = length(power.lm$coef)-1
+apply(matrix(power.lm$coef, ncol = degree +1, nrow = length(velocity.vector), byrow = TRUE)*(matrix(velocity.vector, ncol = degree +1, nrow = length(velocity.vector), byrow = FALSE)^matrix((0:(length(power.lm$coef)-1)), ncol = degree +1, nrow = length(velocity.vector), byrow = TRUE)), 1, sum)}
 
 
 
