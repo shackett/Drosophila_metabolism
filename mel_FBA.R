@@ -6,7 +6,7 @@ setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
 use.line = TRUE
 #if use.flight == TRUE, then the goal is to match the rate of ATP consumption needed to match the maximum flight velocity
 #if use.flight == FALSE, then the goal is to match rates of O2 consumption and CO2 production
-use.flight = FALSE
+use.flight = TRUE
 
 if(use.line == TRUE){
 
@@ -350,16 +350,20 @@ od.measured.carried.flux <- matrix(NA, ncol = length(kinetic_reactions), nrow = 
 
 for (rxn in 1:length(kinetic_reactions)){
 	od.measured.carried.flux[,rxn] <- calc.fluxes[rownames(calc.fluxes) %in% kinetic_reactions[rxn],]
-	}
+	}; colnames(od.measured.carried.flux) <- kinetic_reactions; rownames(od.measured.carried.flux) <- colnames(calc.fluxes)
 
 kinetic_enzymes[kinetic_enzymes == 0] <- NA
 
 Vmax.fraction <- od.measured.carried.flux/kinetic_enzymes
+#measure correlations between these
+sapply(c(1:length(od.measured.carried.flux[1,])), function(x){cor(abs(od.measured.carried.flux[,x]), kinetic_enzymes[,x])})
+
+plot(od.measured.carried.flux[,x] ~  kinetic_enzymes[,x], pch = 16, col = line.color)
 
 vmax.frac.mat <- scale(Vmax.fraction, center = FALSE, scale = TRUE); vmax.frac.mat <- abs(vmax.frac.mat[,!is.nan(vmax.frac.mat[1,])])
-vmax.frac.mat[rownames(vmax.frac.mat) != "N13",]
+vmax.frac.mat <- vmax.frac.mat[rownames(vmax.frac.mat) != "N13",]
 
-heatmap.2(scale(Vmax.fraction, center = TRUE, scale = TRUE))
+#heatmap.2(vmax.frac.mat, trace = "n")
 
 if(use.line == TRUE){
 	write.table(calc.fluxes, file = "line_fluxes.tsv", sep = "\t")
@@ -369,7 +373,22 @@ if(use.line == TRUE){
 		write.table(Vmax.fraction, file = "pop_vmax_fraction.tsv", sep = "\t")
 		}
 		
-#visualizing flux results using Rcytoscape bridge to cytoscape
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
