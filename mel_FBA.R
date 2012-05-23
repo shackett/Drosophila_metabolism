@@ -116,7 +116,8 @@ if(use.line == TRUE){
 	for(pop in 1:length(populations)){
 		line.pop[grep(populations[pop], valid.samples)] <- populations[pop]
 		line.color[grep(populations[pop], valid.samples)] <- as.character(pop.color[pop,2])
-		}}
+		}
+		}
 		
 
 if(use.mcmc == TRUE){
@@ -299,6 +300,7 @@ if(use.mcmc == FALSE){
 	
 if(use.flight == FALSE){
 if(use.line == TRUE){
+	
 gas_exchange = (line.resp[,c(1:2)]/1e7/22.4/3600)*5
 }else{gas_exchange = (pop.resp[,c(1:2)]/1e7/22.4/3600)*5}
 gas_exchange <- gas_exchange * SF
@@ -312,6 +314,10 @@ gas_exchange <- gas_exchange * SF
 
 
 if(use.flight == FALSE){
+
+if(use.line == TRUE){
+	save(kinetic_enzymes, kinetic_reactions, line.pop, line.color, pop.color, file = "color_scheme.R")
+	}
 
 if(ifelse(use.line == TRUE, !("line_resp_fba_fluxes.Rdata" %in% list.files()), !("pop_resp_fba_fluxes.Rdata" %in% list.files()))){
 
@@ -428,7 +434,7 @@ pca_std <- nonzero.flux; pca_std <- t(scale(t(pca_std), center = TRUE, scale = T
 gas_corr_samples <- gas_exchange[sapply(colnames(pca_std), function(x){c(1:length(gas_exchange[,1]))[rownames(gas_exchange) == x]}),]
 gas_corr_samples <- cbind(gas_corr_samples, RQ = gas_corr_samples$Vcot/gas_corr_samples$Vox)
 
-plot(((svd(pca_std, nu = 1, nv = 1)$d^2/sum(svd(pca_std, nu = 2, nv = 2)$d^2))), main = "Variance explained by each PC (ln)", ylab = "proportion of variance explained by PC")
+plot(((svd(pca_std, nu = 1, nv = 1)$d^2/sum(svd(pca_std, nu = 2, nv = 2)$d^2))), main = "Variance explained by each PC", ylab = "proportion of variance explained by PC")
 
 for (pc in 1:n.components){
 	
