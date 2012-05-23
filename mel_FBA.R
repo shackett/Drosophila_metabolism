@@ -1,14 +1,8 @@
-###### Read in absorbance posterior medians for enzyme activity traits as well as flight and respirometry traits
+#qsub -l 1day -cwd -sync n Rscript mel_FBA.R use.cluster=TRUE, use.line=TRUE, use.flight=FALSE, use.mcmc=TRUE
 
-setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
+args <- commandArgs()
 
-load("drosophila_stoi.R")
-source("path_length_calc.R")
-source("flimsy_plate_extract.R")
-library(limSolve)
-library(gplots)
-library("colorRamps")
-
+use.cluster = FALSE
 #if use.line == TRUE, then the point estimates of lines will be used. otherwise population estimates will be used
 use.line = TRUE
 #if use.flight == TRUE, then the goal is to match the rate of ATP consumption needed to match the maximum flight velocity
@@ -17,7 +11,49 @@ use.flight = FALSE
 #if use.mcmc == TRUE, then FBA will be done on all sample within a matrix
 use.mcmc = TRUE
 
-if(use.mcmc == FALSE){
+use.cluster = as.factor(unlist(strsplit(args[grep("use.cluster", args)], "="))[2])
+use.line = as.factor(unlist(strsplit(args[grep("use.line", args)], "="))[2])
+use.flight = as.factor(unlist(strsplit(args[grep("use.flight", args)], "="))[2])
+use.mcmc = as.factor(unlist(strsplit(args[grep("use.mcmc", args)], "="))[2])
+
+if(use.cluster == TRUE){
+	
+	setwd("/Genomics/grid/users/shackett/R/x86_64-unknown-linux-gnu-library/2.11")
+	library("limSolve")
+	#if(!("limSolve" %in% library()$results[,1])){
+	#	install.packages("limSolve", lib = "R", dependencies = TRUE)
+	#	}
+	
+	setwd("/Genomics/grid/users/shackett/Fruitflies")	
+	load("drosophila_stoi.R")
+	source("path_length_calc.R")
+	source("flimsy_plate_extract.R")	
+		
+	inst
+	}else{
+		setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
+		load("drosophila_stoi.R")
+		source("path_length_calc.R")
+		source("flimsy_plate_extract.R")
+		library(limSolve)
+		library(gplots)
+		library("colorRamps")
+		}
+		
+
+
+##### a few functions
+
+find.name <- function(kinetic_enzyme, assay_parameters){
+	assay_parameters$Model_name[rownames(assay_parameters) == kinetic_enzyme]
+	}
+
+velocity.to.power <- function(velocity.vector, power.lm){
+degree = length(power.lm$coef)-1
+apply(matrix(power.lm$coef, ncol = degree +1, nrow = length(velocity.vector), byrow = TRUE)*(matrix(velocity.vector, ncol = degree +1, nrow = length(velocity.vector), byrow = FALSE)^matrix((0:(length(power.lm$coef)-1)), ncol = degree +1, nrow = length(velocity.vector), byrow = TRUE)), 1, sum)}
+
+
+
 	
 #using only a single sample
 if(use.line == TRUE){
@@ -57,19 +93,7 @@ flightM <- read.table("MCMC_files/FLTpopMns.tsv", sep = "\t", header = TRUE)
 pop.flight <- data.frame(maxVel = flightM[,colnames(flightM) %in% "maxv"])
 rownames(pop.flight) <- flightM$"pop_nam"
 	}
-}}else{
-	#using mcmc samples
-	
-	mcmc_files <- list.files("resp_MCMC")[grep(ifelse(use.flight, "FLT", "RESP"), list.files("resp_MCMC"))]
-	mcmc_matrix <- NULL
-	for(mcmc_file in mcmc_files){
-		source(paste("resp_MCMC/", mcmc_file, sep = ""))
-		mcmc_matrix <- rbind(mcmc_matrix, get(ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())]))
-		rm(list = ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())])
-		}
-	}
-
-
+}
 
 if(use.line == TRUE){
 	if(use.flight == FALSE){
@@ -93,11 +117,67 @@ if(use.line == TRUE){
 		line.pop[grep(populations[pop], valid.samples)] <- populations[pop]
 		line.color[grep(populations[pop], valid.samples)] <- as.character(pop.color[pop,2])
 		}}
+		
 
+if(use.mcmc == TRUE){
+	
+	#using mcmc samples
+	
+	mcmc_files <- list.files("resp_MCMC")[grep(ifelse(use.flight, "FLT", "RESP"), list.files("resp_MCMC"))]
+	mcmc_matrix <- NULL
+	for(mcmc_file in mcmc_files){
+		source(paste("resp_MCMC/", mcmc_file, sep = ""))
+		mcmc_matrix <- rbind(mcmc_matrix, get(ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())]))
+		rm(list = ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())])
+		}
+	
+	mcmc_list = list()
+	
+	if(use.flight == FALSE){
+		
+		if(use.line == TRUE){
+			
+			line.resp <- read.table("MCMC_files/RESPlnMns.tsv", sep = "\t", header = TRUE)
+			rownames(line.resp) <- as.character(line.resp$ln_nam)
+			line.resp <- line.resp[,-1]
+			
+			mcmc_list$Vcot = mcmc_matrix[,grep("mu.ln\\[Vcot,", colnames(mcmc_matrix))]
+			mcmc_list$Vox = mcmc_matrix[,grep("mu.ln\\[Vox,", colnames(mcmc_matrix))]
+			colnames(mcmc_list$Vcot) <- rownames(line.resp); colnames(mcmc_list$Vox) <- rownames(line.resp)
+			
+			}else{
+				
+				pop.enzyme <- read.table("MCMC_files/popMat.tsv", sep = "\t", header = TRUE)
+				rownames(pop.enzyme) <- as.character(pop.enzyme$pop_nam)
+				pop.enzyme <- pop.enzyme[,-1]
 
-
-
-
+				mcmc_list$Vcot = mcmc_matrix[,grep("mu.pop\\[Vcot,", colnames(mcmc_matrix))]
+				mcmc_list$Vox = mcmc_matrix[,grep("mu.pop\\[Vox,", colnames(mcmc_matrix))]
+				colnames(mcmc_list$Vcot) <- rownames(pop.enzyme); colnames(mcmc_list$Vox) <- rownames(pop.enzyme)
+				
+				}
+		
+		}else{
+			
+			#FINISH ME
+			
+			
+			}
+	
+	if(use.line == TRUE){
+		
+	#relate lines to their population
+	populations <- c("N", "I", "B", "T", "Z")
+	line.pop <- rep(NA, times = length(mcmc_list$Vcot[1,]))
+	pop.color <- data.frame(pops = populations, color = c("RED", "ORANGE", "BLUE", "GREEN", "CYAN"), long.name = c("Netherlands", "Ithaca", "Beijing", "Tasmania", "Zimbabwee"))
+	line.color <- rep(NA, times = length(mcmc_list$Vcot[1,]))
+	
+	for(pop in 1:length(populations)){
+		line.pop[grep(populations[pop], colnames(mcmc_list$Vcot))] <- populations[pop]
+		line.color[grep(populations[pop], colnames(mcmc_list$Vcot))] <- as.character(pop.color[pop,2])
+		}}
+	
+	}
 
 
 ###### Read in and calculate the paramters needed to transform A/s into moles/s using the beer-lambert law and path-length calculated from the well-geometry and volume of a microtiter-assay
@@ -155,6 +235,8 @@ for (i in 1:length(enzyme_moles_per_second[1,])){
 kinetic_enzymes = enzyme_moles_per_second[,apply(is.na(enzyme_moles_per_second), 2, sum) == 0]
 kinetic_reactions <- unlist(lapply(colnames(kinetic_enzymes), find.name, assay_parameters)) 
 
+if(use.flight == TRUE){
+
 ###### Determine the rate of ATP consumption to sustain maximum velocity
 
 #from Sun et al. 2003:
@@ -200,7 +282,7 @@ dev.off()
 #46500 J per mole ATP (and making the flux for 5 flies again)
 ATP.consumed <- (power.mech/46500)*5
 }
-
+}
 
 
 
@@ -208,24 +290,35 @@ ATP.consumed <- (power.mech/46500)*5
 
 #arbitrary constant to makes fluxes nicer to look at
 SF <- 1e11
+kinetic_enzymes <- kinetic_enzymes * SF
 
 #correct by 10ul -> L, L -> moles, hrs -> seconds, single fly -> 5 flies
 #giving moles/5fly-second
 
+if(use.mcmc == FALSE){
+	
 if(use.flight == FALSE){
 if(use.line == TRUE){
 gas_exchange = (line.resp[,c(1:2)]/1e7/22.4/3600)*5
 }else{gas_exchange = (pop.resp[,c(1:2)]/1e7/22.4/3600)*5}
 gas_exchange <- gas_exchange * SF
+}
+
 }else{
-	ATP.consumed <- ATP.consumed * SF
+	mcmc_list$Vcot <- mcmc_list$Vcot/1e7/22.4/3600*5*SF
+	mcmc_list$Vox  <- mcmc_list$Vox/1e7/22.4/3600*5*SF
 	}
 
-kinetic_enzymes <- kinetic_enzymes * SF
 
+
+if(use.flight == FALSE){
+
+if(ifelse(use.line == TRUE, !("line_resp_fba_fluxes.Rdata" %in% list.files()), !("pop_resp_fba_fluxes.Rdata" %in% list.files()))){
+
+FBA_list = list()
+for(mcmc_step in 1:length(mcmc_list[[1]][,1])){
 
 #sample matricies: kinetic_enzymes & gas_exchange
-
 #iterate through all samples
 nsamples <- length(kinetic_enzymes[,1])
 
@@ -234,6 +327,7 @@ rownames(calc.fluxes) <- colnames(S)
 colnames(calc.fluxes) <- rownames(kinetic_enzymes)
 optim.resid <- rep(NA, times = nsamples)
 
+gas_exchange <- data.frame(Vcot = mcmc_list$Vcot[mcmc_step,], Vox = mcmc_list$Vox[mcmc_step,])
 
 for (line in c(1:nsamples)){
 
@@ -265,16 +359,7 @@ H_irr = rep(0, times = length(irreversible))
 G <- rbind(G_flux, G_irr)
 h <- c(H_flux, H_irr)
 
-#for flight, fatty acid synthesis and the pentose pathway are disabled, consistent with published observations
-if(use.flight == TRUE){
-	G <- rbind(G, ifelse(colnames(joint.stoi.red) == "Palmitate usage", -1, 0), ifelse(colnames(joint.stoi.red) == "Palmitate usage", 1, 0))
-	G <- rbind(G, ifelse(colnames(joint.stoi.red) == "Glucose 6-phosphate dehydrogenase_c", -1, 0), ifelse(colnames(joint.stoi.red) == "Glucose 6-phosphate dehydrogenase_c", 1, 0))
-	G <- rbind(G, ifelse(colnames(joint.stoi.red) == "Palmitoyl-ACP synthesis_c", -1, 0), ifelse(colnames(joint.stoi.red) == "Palmitoyl-ACP synthesis_c", 1, 0))
-	h <- c(h, 0, 0, 0, 0, 0, 0)
-	}
-#colnames(G) <- colnames(S)
 
-if(use.flight == FALSE){
 #reactions for CO2 and O2 exchange
 exchange_rxns = c("CO2 leaving", "O2 entering")
 A = matrix(data = NA, ncol = length(exchange_rxns), nrow = length(joint.stoi.red[1,]))
@@ -282,37 +367,47 @@ for (i in 1:length(exchange_rxns)){
 	A[,i] <- ifelse(colnames(joint.stoi.red) == exchange_rxns[i], 1, 0)
 	}
 u = gas_exchange[line,c(1,2)]
-	}else{
-		#maximize energy generation and minimize carbon usage (sum of trehalase and GP)
-		exchange_rxns = c("ATPase_c", "Trehalase_c", "Glycogen phosphorylase_c")
-		A = matrix(data = NA, ncol = length(exchange_rxns), nrow = length(joint.stoi.red[1,]))
-		for (i in 1:length(exchange_rxns)){
-			if(exchange_rxns[i] == "Trehalase_c"){
-			A[,i] <- ifelse(colnames(joint.stoi.red) == exchange_rxns[i], 2, 0)				}else{
-				A[,i] <- ifelse(colnames(joint.stoi.red) == exchange_rxns[i], 1, 0)
-				}
-			}
-		u = t(c(ATP.consumed[line], 0, 0))
-		}
 
 
-if(use.flight == FALSE){
-	QP.optim <- lsei(A = t(A), B = t(u), E = S, F = f, G = G, H = h)
-	calc.fluxes[,line] <- QP.optim$X
-	optim.resid[line] <- QP.optim$solutionNorm
-	}
+QP.optim <- lsei(A = t(A), B = t(u), E = S, F = f, G = G, H = h)
+calc.fluxes[,line] <- QP.optim$X
+optim.resid[line] <- QP.optim$solutionNorm
 
-if(use.flight == TRUE){
-	LP.optim <- linp(E = S, F = f, G = G, H = h, Cost = -1*(A[,1] - A[,2] - A[,3]), ispos = FALSE)
-	calc.fluxes[,line] <- LP.optim$X
-	optim.resid[line] <- LP.optim$X[names(LP.optim$X) == "ATPase_c"]/ATP.consumed[line]
-	}
+}
+FBA_list[[mcmc_step]] <- calc.fluxes
 }
 
-valid.sample <- !(colnames(calc.fluxes) %in% "N13")
+if(use.line == TRUE){
+	save(FBA_list, file = "line_resp_fba_fluxes.Rdata")
+	}else{
+		save(FBA_list, file = "pop_resp_fba_fluxes.Rdata")
+		}
+}else{
+	if(use.line == TRUE){
+		load("line_resp_fba_fluxes.Rdata")
+		}else{
+			load("pop_resp_fba_fluxes.Rdata")
+			}
+	}}
 
-nonzero.flux <- calc.fluxes[apply(calc.fluxes[,valid.sample] == 0, 1, sum) != length(calc.fluxes[1, valid.sample]),]
 
+
+
+##### extract a median flux profile for each line #####
+
+median.calc.fluxes <- matrix(NA, nrow = length(S[1,]), ncol = nsamples)
+rownames(median.calc.fluxes) <- colnames(S)
+colnames(median.calc.fluxes) <- rownames(kinetic_enzymes)
+
+for(line in 1:nsamples){
+	flux_samples <- sapply(1:100, function(x){FBA_list[[x]][,line]})	
+	median.calc.fluxes[,line] <- apply(flux_samples, 1, median)
+	}
+
+
+valid.sample <- rep(TRUE, times = length(colnames(median.calc.fluxes)))
+#valid.sample <- !(colnames(median.calc.fluxes) %in% "N13")
+nonzero.flux <- median.calc.fluxes[apply(median.calc.fluxes[,valid.sample] == 0, 1, sum) != length(median.calc.fluxes[1, valid.sample]),]
 
 if(use.line == TRUE){pdf(file = "line_flux.pdf")}else{pdf(file = "pop_flux.pdf")}
 
@@ -321,12 +416,9 @@ heatmap.2((nonzero.flux[,valid.sample] - apply(nonzero.flux[,valid.sample], 1, m
 	}else{
 heatmap.2((nonzero.flux - apply(nonzero.flux, 1, mean))/apply(nonzero.flux, 1, sd), trace = "none", col = blue2yellow(100), cexRow = 0.05 + 0.8/log10(length(nonzero.flux[,1])))
 	}
-#calc.fluxes[rownames(calc.fluxes) %in% c("CO2 leaving", "O2 entering"),optim.resid > 0.0001]
 
-#(line.resp[optim.resid > 0.0001,]/1e7/22.4/3600)*SF*5
-#line.enzyme[optim.resid > 0.0001,]
             
-n.components <- 2                          
+n.components <- 2                
 zero.flux <- colnames(S)[apply(calc.fluxes == 0, 1, sum) == length(calc.fluxes[1,])]
 pc_corr <- data.frame(cotcorr = rep(NA, times = n.components), Otcorr = rep(NA, times = n.components), RQcorr = rep(NA, times = n.components))
 
@@ -336,7 +428,7 @@ pca_std <- nonzero.flux; pca_std <- t(scale(t(pca_std), center = TRUE, scale = T
 gas_corr_samples <- gas_exchange[sapply(colnames(pca_std), function(x){c(1:length(gas_exchange[,1]))[rownames(gas_exchange) == x]}),]
 gas_corr_samples <- cbind(gas_corr_samples, RQ = gas_corr_samples$Vcot/gas_corr_samples$Vox)
 
-plot(((svd(pca_std, nu = 1, nv = 1)$d^2/sum(svd(pca_std, nu = 2, nv = 2)$d^2))), main = "Variance explained by each PC (ln)", ylab = "log(proportion of variance explained by PC)")
+plot(((svd(pca_std, nu = 1, nv = 1)$d^2/sum(svd(pca_std, nu = 2, nv = 2)$d^2))), main = "Variance explained by each PC (ln)", ylab = "proportion of variance explained by PC")
 
 for (pc in 1:n.components){
 	
@@ -393,15 +485,6 @@ if(use.line == TRUE){
 
 
 
-##### a few functions
-
-find.name <- function(kinetic_enzyme, assay_parameters){
-	assay_parameters$Model_name[rownames(assay_parameters) == kinetic_enzyme]
-	}
-
-velocity.to.power <- function(velocity.vector, power.lm){
-degree = length(power.lm$coef)-1
-apply(matrix(power.lm$coef, ncol = degree +1, nrow = length(velocity.vector), byrow = TRUE)*(matrix(velocity.vector, ncol = degree +1, nrow = length(velocity.vector), byrow = FALSE)^matrix((0:(length(power.lm$coef)-1)), ncol = degree +1, nrow = length(velocity.vector), byrow = TRUE)), 1, sum)}
 
 
 
