@@ -32,9 +32,11 @@ met_pos[2,] <- c(1,sqrt(3))
 
 rxn_to_do <- c(1:length(stoisub[1,]))[rxn_added == FALSE & apply(matrix(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],], ncol = length(stoisub[1,]))!= 0, 2, sum) != 0]
 
+rxn_added[rxn_to_do] <- TRUE
+
 #loop through reactions that are going to be defined and 
 
-for(rx in 1:length(rxn_to_do)){
+for(rx in rxn_to_do){
 	
 	rxn_stoi <- stoisub[,rx][stoisub[,rx] != 0]
 	cofactor_change <- rxn_stoi[names(rxn_stoi) %in% cofactors]
@@ -103,58 +105,11 @@ for(rx in 1:length(rxn_to_do)){
 			if(odd_react == TRUE){splayed_angle = angle_set_odd[c(1:n_react)]}else{splayed_angle = angle_set_even[c(1:n_react)]}
 			
 			met_posn <- lapply(anglez + splayed_angle, function(x){rxn_nodes[rx, cell_choice[[1]]] + c(cos(x), sin(x))*arm_lengths*arm_ratio})
-			
-			for(i in 1:length(met_posn)){
-				met_pos[rownames(met_pos) == names(principal_change[principal_change > 0]),][i,] <- met_posn[[i]]
-				}
-				}else{
-			
-			center_pos <- apply(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][ndefined_prod,], 2, mean)
-		
-			test_exist <- matrix(rxn_nodes[stoisub[rownames(stoisub) %in% rownames(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][ndefined_prod,]),] != 0,], ncol = 4, byrow = FALSE)
-		
-			#u are here - incorporate ifelse arctan statements
-					
-			#test_exist <- rxn_nodes[matrix(stoisub[rownames(stoisub) %in% rownames(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][ndefined_prod,]),] != 0, ncol = 4, byrow = FALSE),]
-		
-		if(sum(!is.na(test_exist[,1])) != 0){
-			graph_center <- apply(matrix(test_exist[c(1:length(test_exist[,1]))[!is.na(test_exist[,1])],], ncol = 4, byrow = FALSE), 2, mean)[1:2]
-			}else{
-				graph_center <- c(0,0)
-				}
-		
-		angle_det <- center_pos - graph_center; angle_det <- ifelse((center_pos - graph_center)[1] >= 0, atan(angle_det[2]/angle_det[1]), pi + atan(angle_det[2]/angle_det[1]))
-			
-		midpoint <- c(center_pos[1] + cos(angle_det)*(arm_lengths*3 + 2*arm_lengths*arm_ratio)/2, center_pos[2] + sin(angle_det)*(arm_lengths*3 + 2*arm_lengths*arm_ratio)/2)		
-					
-			#center_pos <- apply(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][ndefined_prod,], 2, mean)
-			
-			#angle_det <- center_pos - graph_center; angle_det <- atan(angle_det[2]/angle_det[1])
-			
-			#midpoint <- c(center_pos[1] + cos(angle_det)*(arm_lengths*3 + 2*arm_lengths*arm_ratio)/2, center_pos[2] + sin(angle_det)*(arm_lengths*3 + 2*arm_lengths*arm_ratio)/2)
-			
-			#define the center of mass for the products
-			if(odd_prod == TRUE){
-				anglez <- c(cos(atan((midpoint - center_pos)[2]/(midpoint - center_pos)[1])), sin(atan((midpoint - center_pos)[2]/(midpoint - center_pos)[1])))
-				rxn_nodes[rx, c(3:4)] <- center_pos + arm_lengths*arm_ratio*anglez
-				#define met position
-				}else{
-					anglez <- atan((midpoint - center_pos)[2]/(midpoint - center_pos)[1]) + spread_angle*arm_lengths*arm_ratio/(arm_lengths*1.5 + arm_lengths*arm_ratio); anglez <- c(cos(anglez), sin(anglez))
-					rxn_nodes[rx,c(3:4)] <- center_pos + arm_lengths*arm_ratio*anglez
-					#define met position
-					}
-			rxn_nodes[rx, c(1:2)] <- (arm_lengths*3 + arm_lengths*arm_ratio)*c(cos(atan((rxn_nodes[rx,c(3:4)] - graph_center)[2]/(rxn_nodes[rx,c(3:4)] - graph_center)[1])), sin(atan((rxn_nodes[rx,c(3:4)] - graph_center)[2]/(rxn_nodes[rx,c(3:4)] - graph_center)[1])))
-			
-			anglez <- atan(c(rxn_nodes[rx, c(1:2)] - rxn_nodes[rx, c(3:4)])[2]/c(rxn_nodes[rx, c(1:2)] - rxn_nodes[rx, c(3:4)])[1])
-			if(odd_react == TRUE){splayed_angle = angle_set_odd[c(1:n_react)]}else{splayed_angle = angle_set_even[c(1:n_react)]}
-			met_posn <- lapply(pi + anglez + splayed_angle, function(x){rxn_nodes[rx, c(1:2)] + c(cos(x), sin(x))*arm_lengths*arm_ratio})
-			
 			if(reactDef){changing <- principal_change > 0}else{changing <- principal_change < 0}
-
+		
 			for(i in 1:length(met_posn)){
 				met_pos[rownames(met_pos) == names(principal_change[changing]),][i,] <- met_posn[[i]]
 				}
-				
 				}
 				
 				if(length(ndefined_react) != 0 & length(ndefined_prod) != 0){
