@@ -8,8 +8,21 @@ library(combinat)
 setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
 load("drosophila_stoi.R")
 metab.coord <- read.delim("drosNetLayout.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+split.metab <- read.delim("met_split.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+rxn.list <- list()
+for(i in 1:length(split.metab[,1])){
+	rxn.list[[i]] <- strsplit(split.metab$reaction[i], split = ", ")[[1]]
+	}
+cofactor.rxns <- read.delim("cofactor_exceptions.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+cofactor.list <- list()
+for(i in 1:length(cofactor.rxns[,1])){
+	rxn.list[[i]] <- strsplit(cofactor.rxns$reaction[i], split = ", ")[[1]]
+	}
 
-plot(metab.coord[,3] ~ metab.coord[,2], ylim = c(-100,100), xlim = c(-100,100))
+
+
+
+plot(metab.coord[,3] ~ metab.coord[,2], ylim = c(-100,100), xlim = c(-100,100), pch = 16)
 
 arm_lengths <- 2
 arm_ratio <- 1
@@ -17,23 +30,21 @@ spread_angle <- 60/360*2*pi
 angle_set_odd <- c(0, spread_angle, -spread_angle, 2*spread_angle, -2*spread_angle)
 angle_set_even <- c(spread_angle/2, -spread_angle/2, spread_angle*3/2, -spread_angle*3/2, spread_angle*5/2, -spread_angle*5/2)
 		
-#stoisub <- joint.stoi[apply(joint.stoi[,1:10] != 0, 1, sum) != 0,1:10]
 stoisub <- joint.stoi
+cofactors <- cofactor.rxns$cofactor
 
 
-cofactors <- c("H+_c", "H2O_c", "Phosphate_c", "Diphosphate_c", "ATP_c", "ADP_c", "UTP_c", "UDP_c", "NAD+_m", "NADH_m", "CO2_m", "NADPH_m", "NADP+_m", "ATP_m", "Bicarbonate_m", "ADP_m", "FAD_m", "FADH2_m", "GDP_m", "GTP_m", "OH-_m", "O2_c", "O2_m", "ACP_c", "Bicarbonate_c", "CoA_c", "NAD+_c", "NADH_c", "CO2_c", "NADPH_c", "NADP+_c", "H2O_m", "H+_m", "CoA_m", "OH-_c", "AMP_c")
+metab_names <- c(rownames(stoisub)[!(rownames(stoisub) %in% split.metab$metabolite)], split.metab$new_name)
 
 
-core_mets <- rownames(stoisub)[!(rownames(stoisub) %in% cofactors)]
 
 graph_center <- c(0,0)
-met_pos <- data.frame(x = rep(NA, times = length(core_mets)), y = rep(NA, times = length(core_mets))); rownames(met_pos) <- core_mets
+met_pos <- data.frame(x = rep(NA, times = length(metab_names)), y = rep(NA, times = length(metab_names))); rownames(met_pos) <- metab_names
 rxn_added <- rep(FALSE, times = length(stoisub[1,]))
 rxn_nodes <- matrix(NA, ncol = 4, nrow = length(stoisub[1,])); colnames(rxn_nodes) <- c("rn_x", "rn_y", "pn_x", "pn_y")
 cof_nodes <- NULL
 #cof_nodes <- data.frame(cofactor = NA, xpos = X, ypos = X, stoi = X, stringAsFactors = FALSE)
 
-#met_pos[2,] <- c(1,sqrt(3))
 for(met in 1:length(metab.coord[,1])){
 	met_pos[rownames(met_pos) == metab.coord[met,1],] <- metab.coord[met,2:3]
 	}
@@ -52,9 +63,26 @@ while(length(rxn_to_do) != 0){
 
 for(rx in rxn_to_do){
 	
+	#determine which species are products, substrates and which should be treated as cofactors
+	
 	rxn_stoi <- stoisub[,rx][stoisub[,rx] != 0]
 	cofactor_change <- rxn_stoi[names(rxn_stoi) %in% cofactors]
-	principal_change <-  rxn_stoi[names(rxn_stoi) %in% core_mets]
+	cofactor_change <- cofactor_change[names(cofactor_change) %in% cofactor.rxns$cofactor[cofactor.rxns$cofactor %in% names(cofactor_change)][ifelse(rx %in% cofactor.rxns$reaction[cofactor.rxns$cofactor %in% names(cofactor_change)], FALSE, TRUE)]]
+	
+	rxn.list
+	
+	
+	principal_change <-  rxn_stoi[!(names(rxn_stoi) %in% names(cofactor_change))]
+	 
+	if(sum(names(principal_change) %in% split.metab[,1]) != 0){
+		
+		meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){rx %in% x}),]
+		for(i in 1:length(meta_switch[,1])){
+			names(principal_change)[names(principal_change) == meta_switch[i,1]] <- meta_switch$new_name[i]
+			}
+		}
+	 
+	
 	 
 	odd_react <- odd(length(principal_change[principal_change < 0]))
 	odd_prod <- odd(length(principal_change[principal_change > 0]))
@@ -62,8 +90,6 @@ for(rx in rxn_to_do){
 	n_prod <- length(principal_change[principal_change > 0])
 	ndefined_react <- c(1:length(principal_change))[names(principal_change) %in% names((apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),]), 1, sum) != 0)[(apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),]), 1, sum) != 0) == TRUE])]
 	ndefined_prod <- c(1:length(principal_change))[names(principal_change) %in% names((apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),]), 1, sum) != 0)[(apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),]), 1, sum) != 0) == TRUE])]
-	#ndefined_react <- c(1:n_react)[apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),]), 1, sum) != 0]
-	#ndefined_prod <- c(1:n_prod)[apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),]), 1, sum) != 0]
 	
 	#if only either a subset of products or reactants is defined, but not both, the principal direction vector (going from reactants to products) is determined by the center of the graph.  Otherwise this vector is determined by the position of the defined metabolites, making adjustments to account for whether the number of principal products and reactants is odd or even
 	#if there are already reactions attached to a metabolite polarize the new reaction in the opposite direction from the mean angle
@@ -205,8 +231,27 @@ rxn_added[rxn_to_do] <- TRUE
 plot(met_pos[,2] ~ met_pos[,1], col = "RED")
 segments(rxn_nodes[,1], rxn_nodes[,2], rxn_nodes[,3], rxn_nodes[,4])	
 	
+for(rx in 1:length(stoisub[1,])){
 	
+	rxn_stoi <- stoisub[,rx][stoisub[,rx] != 0]
+	cofactor_change <- rxn_stoi[names(rxn_stoi) %in% cofactors]
+	cofactor_change <- cofactor_change[names(cofactor_change) %in% cofactor.rxns$cofactor[cofactor.rxns$cofactor %in% names(cofactor_change)][ifelse(rx %in% cofactor.rxns$reaction[cofactor.rxns$cofactor %in% names(cofactor_change)], FALSE, TRUE)]]
 	
+	principal_change <-  rxn_stoi[!(names(rxn_stoi) %in% names(cofactor_change))]
+	 
+	if(sum(names(principal_change) %in% split.metab[,1]) != 0){
+		
+		
+		meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){rx %in% x}),]
+
+		for(i in 1:length(meta_switch[,1])){
+			names(principal_change)[names(principal_change) == meta_switch[i,1]] <- meta_switch$new_name[i]
+			}
+		}
+	segments(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),][,1], met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),][,2], rxn_nodes[rx,1], rxn_nodes[rx,2], col = "GREEN")
+	 segments(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][,1], met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][,2], rxn_nodes[rx,3], rxn_nodes[rx,4], col = "GREEN")
+	
+	}
 	
 #add in exceptions:
 #some cofactors should function like primary metabolites for a subset of reactions. e.g. protons should be cofactors for most reactions but are of primary interest for ATP-synthase.  
