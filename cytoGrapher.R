@@ -14,9 +14,12 @@ spread_angle <- 60/360*2*pi
 angle_set_odd <- c(0, spread_angle, -spread_angle, 2*spread_angle, -2*spread_angle)
 angle_set_even <- c(spread_angle/2, -spread_angle/2, spread_angle*3/2, -spread_angle*3/2, spread_angle*5/2, -spread_angle*5/2)
 		
-stoisub <- joint.stoi[apply(joint.stoi[,1:10] != 0, 1, sum) != 0,1:10]
+#stoisub <- joint.stoi[apply(joint.stoi[,1:10] != 0, 1, sum) != 0,1:10]
+stoisub <- joint.stoi
+
 
 cofactors <- c("H+_c", "H2O_c", "Phosphate_c", "Diphosphate_c", "ATP_c", "ADP_c", "UTP_c", "UDP_c")
+cofactors <- c("H+_c", "H2O_c", "Phosphate_c", "Diphosphate_c", "ATP_c", "ADP_c")
 core_mets <- rownames(stoisub)[!(rownames(stoisub) %in% cofactors)]
 
 graph_center <- c(0,0)
@@ -28,12 +31,13 @@ cof_nodes <- NULL
 
 met_pos[2,] <- c(1,sqrt(3))
 
-
-#within each iteration determine the reactions that haven't already been layed out and are connected to at least one already defined specie
-
 rxn_to_do <- c(1:length(stoisub[1,]))[rxn_added == FALSE & apply(matrix(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],], ncol = length(stoisub[1,]))!= 0, 2, sum) != 0]
 
 rxn_added[rxn_to_do] <- TRUE
+
+#within each iteration determine the reactions that haven't already been layed out and are connected to at least one already defined specie
+
+while(length(rxn_to_do) != 0){
 
 #loop through reactions that are going to be defined and 
 
@@ -64,11 +68,11 @@ for(rx in rxn_to_do){
 		if(reactDef){changing <- principal_change < 0}else{changing <- principal_change > 0}
 		#center_pos <- apply(met_pos[rownames(met_pos) %in% names(principal_change[changing]),][ifelse(reactDef, ndefined_react, ndefined_prod),], 2, mean)
 		
-		center_pos <- apply(met_pos[rownames(met_pos) %in% names(principal_change[changing]),][ifelse(reactDef, ndefined_react, ndefined_prod),], 2, mean)
+		center_pos <- apply(met_pos[rownames(met_pos) %in% names(principal_change[ifelse(reactDef, ndefined_react, ndefined_prod)]),], 2, mean)
 		
 		#test_exist <- matrix(rxn_nodes[stoisub[rownames(stoisub) %in% rownames(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),][ndefined_react,]),] != 0,], ncol = 4, byrow = FALSE)
 		
-		test_exist <- matrix(rxn_nodes[stoisub[rownames(stoisub) %in% rownames(met_pos[rownames(met_pos) %in% names(principal_change[changing]),][ifelse(reactDef, ndefined_react, ndefined_prod),]),] != 0,], ncol = 4, byrow = FALSE)
+		test_exist <- matrix(rxn_nodes[stoisub[rownames(stoisub) %in% rownames(met_pos[rownames(met_pos) %in% names(principal_change[ifelse(reactDef, ndefined_react, ndefined_prod)]),]),] != 0,], ncol = 4, byrow = FALSE)
 		
 		if(sum(!is.na(test_exist[,1])) != 0){
 			graph_center <- apply(matrix(test_exist[c(1:length(test_exist[,1]))[!is.na(test_exist[,1])],], ncol = 4, byrow = FALSE), 2, mean)[1:2]
@@ -86,15 +90,20 @@ for(rx in rxn_to_do){
 			
 			if(reactDef){cell_choice <- c(1:2)}else{cell_choice <- c(3:4)}
 			rxn_nodes[rx, cell_choice] <- center_pos + arm_lengths*arm_ratio*anglez
-			#define met position
+			
 			}else{
 				anglez <- ifelse((midpoint - center_pos)[1] >= 0, atan((midpoint - center_pos)[2]/(midpoint - center_pos)[1]), pi + atan((midpoint - center_pos)[2]/(midpoint - center_pos)[1])) + spread_angle*arm_lengths*arm_ratio/(arm_lengths*1.5 + arm_lengths*arm_ratio); anglez <- c(cos(anglez), sin(anglez))
 				
 				if(reactDef){cell_choice <- c(1:2)}else{cell_choice <- c(3:4)}
 				rxn_nodes[rx, cell_choice] <- center_pos + arm_lengths*arm_ratio*anglez
-				#define met position
+									
 					}
-					
+			
+			if(reactDef){changing <- principal_change < 0}else{changing <- principal_change > 0}
+			
+			sub_posn <- met_pos[rownames(met_pos) %in% names(changing[changing == TRUE]),]
+			met_pos[rownames(met_pos) %in% names(changing[changing == TRUE]),] <- met_assigner(rxn_nodes[rx, cell_choice], anglez, sub_posn, arm_lengths*arm_ratio)
+			
 			#define the center of mass for the previously undefined side of the reaction		
 			anglez <- ifelse(c(rxn_nodes[rx,cell_choice] - graph_center)[1] >= 0, atan((rxn_nodes[rx,cell_choice] - graph_center)[2]/(rxn_nodes[rx,cell_choice] - graph_center)[1]), pi + atan((rxn_nodes[rx,cell_choice] - graph_center)[2]/(rxn_nodes[rx,cell_choice] - graph_center)[1])); anglez <- c(cos(anglez), sin(anglez))
 			
@@ -110,7 +119,7 @@ for(rx in rxn_to_do){
 			if(reactDef){changing <- principal_change > 0}else{changing <- principal_change < 0}
 		
 			for(i in 1:length(met_posn)){
-				met_pos[rownames(met_pos) == names(principal_change[changing]),][i,] <- met_posn[[i]]
+				met_pos[rownames(met_pos) %in% names(principal_change[changing]),][i,] <- met_posn[[i]]
 				}
 				}
 				
@@ -174,17 +183,18 @@ for(rx in rxn_to_do){
 					
 					met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),] <- met_assigner(rxn_nodes[rx,3:4], sub_prod_angle + pi, sub_posn, newlen)
 					
-					
-					
-					
-						
 						}
 					
+					}
+					
+					rxn_to_do <- c(1:length(stoisub[1,]))[rxn_added == FALSE & apply(matrix(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],], ncol = length(stoisub[1,]))!= 0, 2, sum) != 0]
+
+rxn_added[rxn_to_do] <- TRUE
 					}
 	
 	
 	
-	}
+	
 	
 	
 	
