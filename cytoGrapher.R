@@ -3,6 +3,7 @@
 
 library("RCytoscape")
 library(gplots)
+library(combinat)
 
 setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
 load("drosophila_stoi.R")
@@ -57,13 +58,12 @@ for(rx in rxn_to_do){
 	if(length(ndefined_react) == 0 | length(ndefined_prod) == 0){
 		#use ifelse to indicate whether reactants or products were defined
 		
-		#redo ifelse statements to allow for more values returned
-		
 		reactDef = ifelse(length(ndefined_react) != 0, TRUE, FALSE)
 		
-		#center_pos <- apply(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),][ndefined_react,], 2, mean)
 		
 		if(reactDef){changing <- principal_change < 0}else{changing <- principal_change > 0}
+		#center_pos <- apply(met_pos[rownames(met_pos) %in% names(principal_change[changing]),][ifelse(reactDef, ndefined_react, ndefined_prod),], 2, mean)
+		
 		center_pos <- apply(met_pos[rownames(met_pos) %in% names(principal_change[changing]),][ifelse(reactDef, ndefined_react, ndefined_prod),], 2, mean)
 		
 		#test_exist <- matrix(rxn_nodes[stoisub[rownames(stoisub) %in% rownames(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),][ndefined_react,]),] != 0,], ncol = 4, byrow = FALSE)
@@ -140,12 +140,45 @@ for(rx in rxn_to_do){
 										
 					#rotate when the number of defined metabolites on one end is even and the total is odd or the number of defined species is odd and the total is even.
 					
+					sub_prod_diff_l <- sqrt(sum((prod_pivot - sub_pivot)^2))
 					
-					comparemet <- expand.grid(c(1:length(ndefined_react)), c(1:length(ndefined_prod)))
-					mapply(comparemet[,1], comparemet[,2], FUN = function(x,y){
-						sub_pos[x,] + prod_pos[y,]
+					if(!((odd(n_prod) & odd(length(ndefined_prod))) | (even(n_prod) & even(length(ndefined_prod))))){
+					sub_prod_angle <- ifelse(sub_prod_diff[1] >= 0, atan(sub_prod_diff[2]/sub_prod_diff[1]), pi + atan(sub_prod_diff[2]/sub_prod_diff[1]))
+					
+					angle_adj <- (sub_prod_angle + atan((sin(spread_angle/2)*(sub_prod_diff_l*arm_lengths*arm_ratio/(2*arm_lengths*arm_ratio + 3*arm_lengths)))/(2*arm_lengths*arm_ratio + 3*arm_lengths)))
+					prod_pivot <- sub_pivot + sub_prod_diff_l*c(cos(angle_adj), sin(angle_adj))
 						}
 					
+					if(!((odd(n_react) & odd(length(ndefined_react))) | (even(n_react) & even(length(ndefined_react))))){
+					sub_prod_angle <- ifelse(sub_prod_diff[1] >= 0, atan(sub_prod_diff[2]/sub_prod_diff[1]), pi + atan(sub_prod_diff[2]/sub_prod_diff[1])) + pi
+					
+					angle_adj <- (sub_prod_angle + atan((sin(spread_angle/2)*(sub_prod_diff_l*arm_lengths*arm_ratio/(2*arm_lengths*arm_ratio + 3*arm_lengths)))/(2*arm_lengths*arm_ratio + 3*arm_lengths)))
+					sub_pivot <- prod_pivot + sub_prod_diff_l*c(cos(angle_adj), sin(angle_adj))
+						}	
+					
+					
+					sub_prod_angle <- ifelse((prod_pivot - sub_pivot)[1] >= 0, atan((prod_pivot - sub_pivot)[2]/(prod_pivot - sub_pivot)[1]), pi + atan((prod_pivot - sub_pivot)[2]/(prod_pivot - sub_pivot)[1]))
+					
+					
+					rxn_nodes[rx,1:2] <- sub_pivot + sub_prod_diff_l*arm_lengths*arm_ratio/(2*arm_lengths*arm_ratio + 3*arm_lengths)*c(cos(sub_prod_angle), sin(sub_prod_angle))
+					rxn_nodes[rx,3:4] <- prod_pivot + sub_prod_diff_l*arm_lengths*arm_ratio/(2*arm_lengths*arm_ratio + 3*arm_lengths)*c(cos(sub_prod_angle + pi), sin(sub_prod_angle + pi))
+
+					#assign metabolites
+					
+					newlen <- sub_prod_diff_l*arm_lengths*arm_ratio/(2*arm_lengths*arm_ratio + 3*arm_lengths)
+					sub_posn <- met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),]
+					
+					met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),] <- met_assigner(rxn_nodes[rx,1:2], sub_prod_angle, sub_posn, newlen)
+					
+					sub_posn <- met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),]
+					
+					met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),] <- met_assigner(rxn_nodes[rx,3:4], sub_prod_angle + pi, sub_posn, newlen)
+					
+					
+					
+					
+						
+						}
 					
 					}
 	
@@ -166,6 +199,40 @@ for(rx in rxn_to_do){
 	
 	
 	
+					
+					
+					
+					
+					
+					
+met_assigner <- function(head_node, rxn_angle, sub_posn, newlen){
+						
+	#assign metabolites to angles radiating from a node such that minimize the sum of squared angle adjustment
+	#returns a filled in version of sub_posn
+					
+	nmets <- length(sub_posn[,1])
+	if(odd(nmets)){
+		met_angles <- angle_set_odd[1:nmets]
+		}else{
+			met_angles <- angle_set_even[1:nmets]
+			}
+					
+	ideal_met_angles <- rxn_angle + met_angles
+	actual_met_angles <- apply(sub_posn, 1, function(x){
+	if(is.na(x[1])){
+		NA
+		}else{
+	ifelse((x - head_node)[1] >= 0, atan((head_node - x)[2]/(head_node - x)[1]), atan((head_node - x)[2]/(head_node - x)[1]) + pi)}})
+	angle_permutations <- permn(ideal_met_angles)
+	new_angles <- angle_permutations[which.min(lapply(angle_permutations, function(x){sum((x - actual_met_angles)^2, na.rm = TRUE)}))][[1]]
+					
+	for(metab in c(1:length(sub_posn[,1]))){
+		if(is.na(sub_posn[metab,][1])){
+			sub_posn[metab,] <- head_node + newlen*c(cos(new_angles[metab]), sin(new_angles[metab]))
+			}
+		}
+	sub_posn
+	}
 	
 	
 	
