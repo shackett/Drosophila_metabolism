@@ -7,8 +7,11 @@ library(combinat)
 
 setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
 load("drosophila_stoi.R")
+metab.coord <- read.delim("drosNetLayout.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 
-arm_lengths <- 4
+plot(metab.coord[,3] ~ metab.coord[,2], ylim = c(-100,100), xlim = c(-100,100))
+
+arm_lengths <- 2
 arm_ratio <- 1
 spread_angle <- 60/360*2*pi
 angle_set_odd <- c(0, spread_angle, -spread_angle, 2*spread_angle, -2*spread_angle)
@@ -18,8 +21,9 @@ angle_set_even <- c(spread_angle/2, -spread_angle/2, spread_angle*3/2, -spread_a
 stoisub <- joint.stoi
 
 
-cofactors <- c("H+_c", "H2O_c", "Phosphate_c", "Diphosphate_c", "ATP_c", "ADP_c", "UTP_c", "UDP_c")
-cofactors <- c("H+_c", "H2O_c", "Phosphate_c", "Diphosphate_c", "ATP_c", "ADP_c")
+cofactors <- c("H+_c", "H2O_c", "Phosphate_c", "Diphosphate_c", "ATP_c", "ADP_c", "UTP_c", "UDP_c", "NAD+_m", "NADH_m", "CO2_m", "NADPH_m", "NADP+_m", "ATP_m", "Bicarbonate_m", "ADP_m", "FAD_m", "FADH2_m", "GDP_m", "GTP_m", "OH-_m", "O2_c", "O2_m", "ACP_c", "Bicarbonate_c", "CoA_c", "NAD+_c", "NADH_c", "CO2_c", "NADPH_c", "NADP+_c", "H2O_m", "H+_m", "CoA_m", "OH-_c", "AMP_c")
+
+
 core_mets <- rownames(stoisub)[!(rownames(stoisub) %in% cofactors)]
 
 graph_center <- c(0,0)
@@ -29,7 +33,12 @@ rxn_nodes <- matrix(NA, ncol = 4, nrow = length(stoisub[1,])); colnames(rxn_node
 cof_nodes <- NULL
 #cof_nodes <- data.frame(cofactor = NA, xpos = X, ypos = X, stoi = X, stringAsFactors = FALSE)
 
-met_pos[2,] <- c(1,sqrt(3))
+#met_pos[2,] <- c(1,sqrt(3))
+for(met in 1:length(metab.coord[,1])){
+	met_pos[rownames(met_pos) == metab.coord[met,1],] <- metab.coord[met,2:3]
+	}
+
+
 
 rxn_to_do <- c(1:length(stoisub[1,]))[rxn_added == FALSE & apply(matrix(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],], ncol = length(stoisub[1,]))!= 0, 2, sum) != 0]
 
@@ -193,7 +202,8 @@ rxn_added[rxn_to_do] <- TRUE
 					}
 	
 	
-	
+plot(met_pos[,2] ~ met_pos[,1], col = "RED")
+segments(rxn_nodes[,1], rxn_nodes[,2], rxn_nodes[,3], rxn_nodes[,4])	
 	
 	
 	
