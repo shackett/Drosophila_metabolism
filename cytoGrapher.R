@@ -46,8 +46,10 @@ for(rx in rxn_to_do){
 	odd_prod <- odd(length(principal_change[principal_change > 0]))
 	n_react <- length(principal_change[principal_change < 0])
 	n_prod <- length(principal_change[principal_change > 0])
-	ndefined_react <- c(1:n_react)[apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),]), 1, sum) != 0]
-	ndefined_prod <- c(1:n_prod)[apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),]), 1, sum) != 0]
+	ndefined_react <- c(1:length(principal_change))[names(principal_change) %in% names((apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),]), 1, sum) != 0)[(apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),]), 1, sum) != 0) == TRUE])]
+	ndefined_prod <- c(1:length(principal_change))[names(principal_change) %in% names((apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),]), 1, sum) != 0)[(apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),]), 1, sum) != 0) == TRUE])]
+	#ndefined_react <- c(1:n_react)[apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),]), 1, sum) != 0]
+	#ndefined_prod <- c(1:n_prod)[apply(!is.na(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),]), 1, sum) != 0]
 	
 	#if only either a subset of products or reactants is defined, but not both, the principal direction vector (going from reactants to products) is determined by the center of the graph.  Otherwise this vector is determined by the position of the defined metabolites, making adjustments to account for whether the number of principal products and reactants is odd or even
 	#if there are already reactions attached to a metabolite polarize the new reaction in the opposite direction from the mean angle
@@ -114,8 +116,37 @@ for(rx in rxn_to_do){
 				
 				if(length(ndefined_react) != 0 & length(ndefined_prod) != 0){
 				
-					#if there are defined reactants and products then the direction of the reaction edge linking them will be determined by their position with some offset to account for whether their is an odd or even number of reactants/products
+					#if there are defined reactants and products then the direction of the reaction edge linking them will be determined by their position with some offset to account for whether there is an odd or even number of reactants/products
 					print("woot")
+					#get the position of defined reactants and products
+					
+					sub_pos <- met_pos[rownames(met_pos) %in% names(principal_change)[ndefined_react],]
+					prod_pos <- met_pos[rownames(met_pos) %in% names(principal_change)[ndefined_prod],]
+					sub_pivot <- apply(sub_pos, 2, mean)
+					prod_pivot <- apply(prod_pos, 2, mean)
+					
+					#scale the pivot length to equal the minimum distance between a 'reactant or product pivot node', initially defined as the average position of defined products or reactants, and each defined product/reactant.
+					len_scale <- min(sqrt(apply((matrix(sub_pivot, ncol = 2, nrow = length(ndefined_prod), byrow = TRUE) - prod_pos)^2, 1, sum)))/sqrt(sum((sub_pivot - prod_pivot)^2))
+					sub_prod_diff <- prod_pivot - sub_pivot
+					sub_prod_angle <- ifelse(sub_prod_diff[1] >= 0, atan(sub_prod_diff[2]/sub_prod_diff[1]), pi + atan(sub_prod_diff[2]/sub_prod_diff[1]))
+					
+					prod_pivot <- sub_pivot + len_scale*sqrt(sum((sub_pivot - prod_pivot)^2))*c(cos(sub_prod_angle), sin(sub_prod_angle))
+					
+					len_scale <- min(sqrt(apply((matrix(prod_pivot, ncol = 2, nrow = length(ndefined_react), byrow = TRUE) - sub_pos)^2, 1, sum)))/sqrt(sum((sub_pivot - prod_pivot)^2))
+					sub_prod_diff <- prod_pivot - sub_pivot
+					sub_prod_angle <- ifelse(sub_prod_diff[1] >= 0, atan(sub_prod_diff[2]/sub_prod_diff[1]), pi + atan(sub_prod_diff[2]/sub_prod_diff[1])) + pi
+
+					sub_pivot <- prod_pivot + len_scale*sqrt(sum((sub_pivot - prod_pivot)^2))*c(cos(sub_prod_angle), sin(sub_prod_angle))
+										
+					#rotate when the number of defined metabolites on one end is even and the total is odd or the number of defined species is odd and the total is even.
+					
+					
+					comparemet <- expand.grid(c(1:length(ndefined_react)), c(1:length(ndefined_prod)))
+					mapply(comparemet[,1], comparemet[,2], FUN = function(x,y){
+						sub_pos[x,] + prod_pos[y,]
+						}
+					
+					
 					}
 	
 	
