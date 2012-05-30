@@ -16,13 +16,13 @@ for(i in 1:length(split.metab[,1])){
 cofactor.rxns <- read.delim("cofactor_exceptions.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 cofactor.list <- list()
 for(i in 1:length(cofactor.rxns[,1])){
-	rxn.list[[i]] <- strsplit(cofactor.rxns$reaction[i], split = ", ")[[1]]
+	cofactor.list[[i]] <- strsplit(cofactor.rxns$reaction[i], split = ", ")[[1]]
 	}
 
 
 
 
-plot(metab.coord[,3] ~ metab.coord[,2], ylim = c(-100,100), xlim = c(-100,100), pch = 16)
+#plot(metab.coord[,3] ~ metab.coord[,2], ylim = c(-100,100), xlim = c(-100,100), pch = 16)
 
 arm_lengths <- 2
 arm_ratio <- 1
@@ -49,9 +49,18 @@ for(met in 1:length(metab.coord[,1])){
 	met_pos[rownames(met_pos) == metab.coord[met,1],] <- metab.coord[met,2:3]
 	}
 
+#reactions to be evaluated must have at least one already positioned substrate or product
 
+tmp_mat <- matrix(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],], ncol = length(stoisub[1,])); rownames(tmp_mat) <- rownames(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],])
+def_cof <- rownames(tmp_mat) %in% cofactor.rxns$cofactor
+def_cof_index <- c(1:length(def_cof))[def_cof]
+for(met in c(1:sum(def_cof))){
+	tmp <- rep(0, times = length(stoisub[1,]))
+	tmp[as.numeric(cofactor.list[[c(1:length(cofactor.rxns[,1]))[cofactor.rxns$cofactor %in% rownames(tmp_mat)[def_cof_index[met]]]]])] <- 1
+	tmp_mat[def_cof_index[met],] <- tmp
+	}
 
-rxn_to_do <- c(1:length(stoisub[1,]))[rxn_added == FALSE & apply(matrix(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],], ncol = length(stoisub[1,]))!= 0, 2, sum) != 0]
+rxn_to_do <- c(1:length(stoisub[1,]))[rxn_added == FALSE & apply(tmp_mat!= 0, 2, sum) != 0]
 
 rxn_added[rxn_to_do] <- TRUE
 
@@ -64,22 +73,22 @@ while(length(rxn_to_do) != 0){
 for(rx in rxn_to_do){
 	
 	#determine which species are products, substrates and which should be treated as cofactors
-	
+	#if(rx == 43){die}
 	rxn_stoi <- stoisub[,rx][stoisub[,rx] != 0]
 	cofactor_change <- rxn_stoi[names(rxn_stoi) %in% cofactors]
-	cofactor_change <- cofactor_change[names(cofactor_change) %in% cofactor.rxns$cofactor[cofactor.rxns$cofactor %in% names(cofactor_change)][ifelse(rx %in% cofactor.rxns$reaction[cofactor.rxns$cofactor %in% names(cofactor_change)], FALSE, TRUE)]]
-	
-	rxn.list
-	
+	if(length(cofactor_change) != 0){
+	cofactor_change <- cofactor_change[names(cofactor_change) %in% cofactor.rxns$cofactor[cofactor.rxns$cofactor %in% names(cofactor_change)][sapply(cofactor.list[cofactor.rxns$cofactor %in% names(cofactor_change)], function(x){!(rx %in% x)})]]
+		}
 	
 	principal_change <-  rxn_stoi[!(names(rxn_stoi) %in% names(cofactor_change))]
-	 
+		 
 	if(sum(names(principal_change) %in% split.metab[,1]) != 0){
 		
 		meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){rx %in% x}),]
 		for(i in 1:length(meta_switch[,1])){
 			names(principal_change)[names(principal_change) == meta_switch[i,1]] <- meta_switch$new_name[i]
 			}
+			if(length(meta_switch) != 0){print(rx)}
 		}
 	 
 	
@@ -130,8 +139,7 @@ for(rx in rxn_to_do){
 				anglez <- ifelse((midpoint - center_pos)[1] >= 0, atan((midpoint - center_pos)[2]/(midpoint - center_pos)[1]), pi + atan((midpoint - center_pos)[2]/(midpoint - center_pos)[1])) + spread_angle*arm_lengths*arm_ratio/(arm_lengths*1.5 + arm_lengths*arm_ratio); anglez <- c(cos(anglez), sin(anglez))
 				
 				if(reactDef){cell_choice <- c(1:2)}else{cell_choice <- c(3:4)}
-				rxn_nodes[rx, cell_choice] <- center_pos + arm_lengths*arm_ratio*anglez
-									
+				rxn_nodes[rx, cell_choice] <- center_pos + arm_lengths*arm_ratio*anglez					
 					}
 			
 			if(reactDef){changing <- principal_change < 0}else{changing <- principal_change > 0}
@@ -154,14 +162,13 @@ for(rx in rxn_to_do){
 			if(reactDef){changing <- principal_change > 0}else{changing <- principal_change < 0}
 		
 			for(i in 1:length(met_posn)){
-				met_pos[rownames(met_pos) %in% names(principal_change[changing]),][i,] <- met_posn[[i]]
+				met_pos[rownames(met_pos) %in% names(principal_change[changing]),] <- met_posn[[i]]
 				}
 				}
 				
 				if(length(ndefined_react) != 0 & length(ndefined_prod) != 0){
 				
 					#if there are defined reactants and products then the direction of the reaction edge linking them will be determined by their position with some offset to account for whether there is an odd or even number of reactants/products
-					print("woot")
 					#get the position of defined reactants and products
 					
 					sub_pos <- met_pos[rownames(met_pos) %in% names(principal_change)[ndefined_react],]
@@ -222,9 +229,21 @@ for(rx in rxn_to_do){
 					
 					}
 					
-					rxn_to_do <- c(1:length(stoisub[1,]))[rxn_added == FALSE & apply(matrix(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],], ncol = length(stoisub[1,]))!= 0, 2, sum) != 0]
+				tmp_mat <- matrix(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],], ncol = length(stoisub[1,])); rownames(tmp_mat) <- rownames(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],])
+def_cof <- rownames(tmp_mat) %in% cofactor.rxns$cofactor
+def_cof_index <- c(1:length(def_cof))[def_cof]
+for(met in c(1:sum(def_cof))){
+	tmp <- rep(0, times = length(stoisub[1,]))
+	tmp[as.numeric(cofactor.list[[c(1:length(cofactor.rxns[,1]))[cofactor.rxns$cofactor %in% rownames(tmp_mat)[def_cof_index[met]]]]])] <- 1
+	tmp_mat[def_cof_index[met],] <- tmp
+	}
+	
+
+rxn_to_do <- c(1:length(stoisub[1,]))[rxn_added == FALSE & apply(tmp_mat!= 0, 2, sum) != 0]
 
 rxn_added[rxn_to_do] <- TRUE
+
+
 					}
 	
 	
@@ -235,22 +254,27 @@ for(rx in 1:length(stoisub[1,])){
 	
 	rxn_stoi <- stoisub[,rx][stoisub[,rx] != 0]
 	cofactor_change <- rxn_stoi[names(rxn_stoi) %in% cofactors]
-	cofactor_change <- cofactor_change[names(cofactor_change) %in% cofactor.rxns$cofactor[cofactor.rxns$cofactor %in% names(cofactor_change)][ifelse(rx %in% cofactor.rxns$reaction[cofactor.rxns$cofactor %in% names(cofactor_change)], FALSE, TRUE)]]
+	if(length(cofactor_change) != 0){
+	cofactor_change <- cofactor_change[names(cofactor_change) %in% cofactor.rxns$cofactor[cofactor.rxns$cofactor %in% names(cofactor_change)][sapply(cofactor.list[cofactor.rxns$cofactor %in% names(cofactor_change)], function(x){!(rx %in% x)})]]
+		}
+	
 	
 	principal_change <-  rxn_stoi[!(names(rxn_stoi) %in% names(cofactor_change))]
 	 
 	if(sum(names(principal_change) %in% split.metab[,1]) != 0){
 		
-		
 		meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){rx %in% x}),]
-
 		for(i in 1:length(meta_switch[,1])){
 			names(principal_change)[names(principal_change) == meta_switch[i,1]] <- meta_switch$new_name[i]
 			}
 		}
-	segments(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),][,1], met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),][,2], rxn_nodes[rx,1], rxn_nodes[rx,2], col = "GREEN")
-	 segments(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][,1], met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][,2], rxn_nodes[rx,3], rxn_nodes[rx,4], col = "GREEN")
 	
+	if(length(principal_change[principal_change < 0]) > 0){	
+	segments(met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),][,1], met_pos[rownames(met_pos) %in% names(principal_change[principal_change < 0]),][,2], rxn_nodes[rx,1], rxn_nodes[rx,2], col = "GREEN")
+		}
+	if(length(principal_change[principal_change > 0]) > 0){
+	 segments(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][,1], met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][,2], rxn_nodes[rx,3], rxn_nodes[rx,4], col = "GREEN")
+		}
 	}
 	
 #add in exceptions:
