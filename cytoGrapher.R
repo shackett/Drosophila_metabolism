@@ -18,11 +18,15 @@ cofactor.list <- list()
 for(i in 1:length(cofactor.rxns[,1])){
 	cofactor.list[[i]] <- strsplit(cofactor.rxns$reaction[i], split = ", ")[[1]]
 	}
+nodeOver <- read.delim("nodeOverride.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 
 
+#sort(rownames(stoisub)[!(rownames(stoisub) %in% metab.coord$Metabolite)])
+#colnames(stoisub)[c(1:length(rxn_nodes[,1]))[is.na(rxn_nodes)[,1]]]
+#c(1:length(stoisub[1,]))[c(1:length(rxn_nodes[,1]))[is.na(rxn_nodes)[,1]]]
 
 
-#plot(metab.coord[,3] ~ metab.coord[,2], ylim = c(-100,100), xlim = c(-100,100), pch = 16)
+plot(metab.coord[,3] ~ metab.coord[,2], ylim = c(-100,100), xlim = c(-100,100), pch = 16)
 
 arm_lengths <- 2
 arm_ratio <- 1
@@ -35,14 +39,14 @@ cofactors <- cofactor.rxns$cofactor
 
 
 metab_names <- c(rownames(stoisub)[!(rownames(stoisub) %in% split.metab$metabolite)], split.metab$new_name)
-
-
+#rbind(stoisub[,!(apply(!is.na(rxn_nodes), 1, sum) != 0)], c(1:length(!(apply(!is.na(rxn_nodes), 1, sum) != 0)))[!(apply(!is.na(rxn_nodes), 1, sum) != 0)])
 
 graph_center <- c(0,0)
 met_pos <- data.frame(x = rep(NA, times = length(metab_names)), y = rep(NA, times = length(metab_names))); rownames(met_pos) <- metab_names
 rxn_added <- rep(FALSE, times = length(stoisub[1,]))
-rxn_nodes <- matrix(NA, ncol = 4, nrow = length(stoisub[1,])); colnames(rxn_nodes) <- c("rn_x", "rn_y", "pn_x", "pn_y")
+rxn_nodes <- matrix(NA, ncol = 4, nrow = length(stoisub[1,])); colnames(rxn_nodes) <- c("rn_x", "rn_y", "pn_x", "pn_y"); rownames(rxn_nodes) <- colnames(stoisub)
 cof_nodes <- NULL
+
 #cof_nodes <- data.frame(cofactor = NA, xpos = X, ypos = X, stoi = X, stringAsFactors = FALSE)
 
 for(met in 1:length(metab.coord[,1])){
@@ -88,7 +92,7 @@ for(rx in rxn_to_do){
 		for(i in 1:length(meta_switch[,1])){
 			names(principal_change)[names(principal_change) == meta_switch[i,1]] <- meta_switch$new_name[i]
 			}
-			if(length(meta_switch) != 0){print(rx)}
+			#if(length(meta_switch) != 0){print(rx)}
 		}
 	 
 	
@@ -243,11 +247,17 @@ rxn_to_do <- c(1:length(stoisub[1,]))[rxn_added == FALSE & apply(tmp_mat!= 0, 2,
 
 rxn_added[rxn_to_do] <- TRUE
 
+}
 
-					}
+#overwrite some nodes with pre-specified coordinates
+for(i in 1:length(nodeOver[,1])){
+	rxn_nodes[nodeOver$reaction[i],] <- unlist(nodeOver[i,-1])
+	}
+
+
 	
 	
-plot(met_pos[,2] ~ met_pos[,1], col = "RED")
+plot(met_pos[,2] ~ met_pos[,1], col = "RED", pch = 16)
 segments(rxn_nodes[,1], rxn_nodes[,2], rxn_nodes[,3], rxn_nodes[,4])	
 	
 for(rx in 1:length(stoisub[1,])){
@@ -276,16 +286,6 @@ for(rx in 1:length(stoisub[1,])){
 	 segments(met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][,1], met_pos[rownames(met_pos) %in% names(principal_change[principal_change > 0]),][,2], rxn_nodes[rx,3], rxn_nodes[rx,4], col = "GREEN")
 		}
 	}
-	
-#add in exceptions:
-#some cofactors should function like primary metabolites for a subset of reactions. e.g. protons should be cofactors for most reactions but are of primary interest for ATP-synthase.  
-#some primary metabolites should be split into subsets whose position is indexed with a list	
-	
-	
-	
-	
-	
-	
 	
 	
 					

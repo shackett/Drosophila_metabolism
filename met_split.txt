@@ -1,0 +1,1 @@
+metabolite	reaction	new_nameUDPglucose_c	2	UDP-glucose_AUDPglucose_c	"7, 8"	UDP-glucose_B
