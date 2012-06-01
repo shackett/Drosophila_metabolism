@@ -254,6 +254,10 @@ for(i in 1:length(nodeOver[,1])){
 	rxn_nodes[nodeOver$reaction[i],] <- unlist(nodeOver[i,-1])
 	}
 
+
+
+########## Add the created reaction diagram to cytoscape and specify attributes allowing for flexible visualization ######
+
 library(RCytoscape)
 
 mel_graph <- new("graphNEL", edgemode = "directed")
@@ -307,11 +311,11 @@ for(rx in 1:length(stoisub[1,])){
 		
 		}
 	if(length(principal_change[principal_change > 0]) > 0){
-	 	mel_graph <- graph::addEdge(paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), mel_graph)
+	 	mel_graph <- graph::addEdge(paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), mel_graph, unname(abs(principal_change[principal_change > 0])))
 	 	edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), "weights") <- unname(abs(principal_change[principal_change > 0]))
 	 	edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), "edgeType") <- "consumed"
 	 	}
-	 	mel_graph <- addEdge(paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), mel_graph)
+	 	mel_graph <- addEdge(paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), mel_graph, 1)
 		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "weights") <- 1
 		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "edgeType") <- "reacts"
 	}
@@ -319,22 +323,47 @@ for(rx in 1:length(stoisub[1,])){
 #eda.names(mel_graph)
 #eda(mel_graph, "weights")
 
-plotter = new.CytoscapeWindow("mel_graph9", graph = mel_graph)
+plotter = new.CytoscapeWindow("mel_graph12", graph = mel_graph)
 #specify node positioning
 #options(error = recover)
 #options(help.ports=2120)
 displayGraph(plotter)
 
-setNodePosition(plotter, rownames(met_pos)[!is.na(met_pos[,1])], met_pos$x[!is.na(met_pos[,1])], met_pos$y[!is.na(met_pos[,1])])
+setNodePosition(plotter, rownames(met_pos)[!is.na(met_pos[,1])], met_pos$x[!is.na(met_pos[,1])], -1*met_pos$y[!is.na(met_pos[,1])])
+setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"),rxn_nodes[,1][!is.na(rxn_nodes[,1])], -1*rxn_nodes[,2][!is.na(rxn_nodes[,1])])
+setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,3])], "prod", sep = "_"),rxn_nodes[,3][!is.na(rxn_nodes[,3])], -1*rxn_nodes[,4][!is.na(rxn_nodes[,3])])	
+#hide all of the reaction nodese
+setNodeFillOpacityDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"), 0)
+setNodeFillOpacityDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "prod", sep = "_"), 0)
+setNodeBorderOpacityDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"), 0)
+setNodeBorderOpacityDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "prod", sep = "_"), 0)
 
-setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"),rxn_nodes[,1][!is.na(rxn_nodes[,1])], rxn_nodes[,2][!is.na(rxn_nodes[,1])])
-setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,3])], "prod", sep = "_"),rxn_nodes[,3][!is.na(rxn_nodes[,3])], rxn_nodes[,4][!is.na(rxn_nodes[,3])])	
 
-#displayGraph(plotter)
-#options
-#setDefaultNodeShape
+setNodeFillOpacityDirect(
 setDefaultNodeSize(plotter, 2)
-setDefaultNodeFontSize(plotter, 2)
+setDefaultNodeFontSize(plotter, 0.5)
+
+edgeVals <- sort(unique(eda(mel_graph, "weights")))
+setEdgeLineWidthRule(plotter, 'weights', edgeVals, edgeVals, default.width = 1) 
+
+#setEdgeLineWidthRule(obj, edge.attribute.name, attribute.values, line.widths, default.width)
+
+#add flux value - either effects edge width or color
+load("LHPC_resp.Rdata")
+
+library(colorRamps)
+round((x + max(abs(range(lh_pc))))/(2*max(abs(range(lh_pc))))*1000)
+colorz <- blue2red(1000)
+
+
+setEdgeLineWidthDirect
+
+#source the options in this script and save the model positioning part
+
+
+
+cy2.edge.names(mel_graph)
+
 
 
 #layout(plotter, layout.name = "grid")
