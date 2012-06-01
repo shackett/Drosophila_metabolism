@@ -265,6 +265,8 @@ mel_graph <- initNodeAttribute(graph = mel_graph, attribute.name = "moleculeType
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "edgeType", attribute.type = "char", default.value = "produces")
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "weights", attribute.type = "numeric", default.value = 1)
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "weight", attribute.type = "numeric", default.value = 1)
+mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "reaction", attribute.type = "char", default.value = "undefined")
+
 #specify metabolite nodes
 for(mets in 1:length(met_pos[,1])){
 	if(is.nan(met_pos[mets,1])){print(paste(mets, " NaN", collapse = " "))}
@@ -308,22 +310,25 @@ for(rx in 1:length(stoisub[1,])){
 		mel_graph <- graph::addEdge(names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), mel_graph, unname(abs(principal_change[principal_change < 0])))
 		edgeData(mel_graph, names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), "weights") <- unname(abs(principal_change[principal_change < 0]))
 		edgeData(mel_graph, names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), "edgeType") <- "produced"
+		edgeData(mel_graph, names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), "reaction") <- rownames(rxn_nodes)[rx]
 		
 		}
 	if(length(principal_change[principal_change > 0]) > 0){
 	 	mel_graph <- graph::addEdge(paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), mel_graph, unname(abs(principal_change[principal_change > 0])))
 	 	edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), "weights") <- unname(abs(principal_change[principal_change > 0]))
 	 	edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), "edgeType") <- "consumed"
+	 	edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), "reaction") <- rownames(rxn_nodes)[rx]
 	 	}
 	 	mel_graph <- addEdge(paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), mel_graph, 1)
 		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "weights") <- 1
 		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "edgeType") <- "reacts"
+		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "reaction") <- rownames(rxn_nodes)[rx]
 	}
 
 #eda.names(mel_graph)
 #eda(mel_graph, "weights")
 
-plotter = new.CytoscapeWindow("mel_graph12", graph = mel_graph)
+plotter = new.CytoscapeWindow("mel_graph14", graph = mel_graph)
 #specify node positioning
 #options(error = recover)
 #options(help.ports=2120)
@@ -337,24 +342,58 @@ setNodeFillOpacityDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1]
 setNodeFillOpacityDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "prod", sep = "_"), 0)
 setNodeBorderOpacityDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"), 0)
 setNodeBorderOpacityDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "prod", sep = "_"), 0)
+setNodeSizeDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"), 0.01)
+setNodeSizeDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "prod", sep = "_"), 0.01)
 
-
-setNodeFillOpacityDirect(
 setDefaultNodeSize(plotter, 2)
 setDefaultNodeFontSize(plotter, 0.5)
 
-edgeVals <- sort(unique(eda(mel_graph, "weights")))
-setEdgeLineWidthRule(plotter, 'weights', edgeVals, edgeVals, default.width = 1) 
+#edgeVals <- sort(unique(eda(mel_graph, "weights")))
+#names(eda(mel_graph, "weights")), unname(eda(mel_graph, "weights"))
+
 
 #setEdgeLineWidthRule(obj, edge.attribute.name, attribute.values, line.widths, default.width)
-
+#getArrowShapes(plotter)
+#setEdgeTargetArrowRule
 #add flux value - either effects edge width or color
 load("LHPC_resp.Rdata")
-
 library(colorRamps)
-round((x + max(abs(range(lh_pc))))/(2*max(abs(range(lh_pc))))*1000)
-colorz <- blue2red(1000)
 
+colorz <- blue2red(1000)
+col_index <- round((lh_pc + max(abs(range(lh_pc))))/(2*max(abs(range(lh_pc))))*1000)
+pc_num <- 1
+
+
+
+edgeSF <- 0.5
+for(x in c(1:length(eda(mel_graph, "weights")))){
+	#setEdgeLineWidthDirect(plotter, names(eda(mel_graph, "weights"))[x], (unname(eda(mel_graph, "weights"))*edgeSF)[x])
+	rxn = unname(eda(mel_graph, "reaction"))[x]
+	if(!(rxn %in% rownames(col_index))){
+		setEdgeColorDirect(plotter, names(eda(mel_graph, "reaction"))[x], rgb(0,0,0))
+		}else{
+			setEdgeColorDirect(plotter, names(eda(mel_graph, "reaction"))[x], colorz[col_index[rownames(col_index) %in% rxn,pc_num]])
+			}}
+	
+	
+	
+	
+
+
+
+
+
+
+setEdgeLineWidthDirect
+
+
+
+
+
+
+setEdgeColorDirect(plotter, 
+
+setEdgeColorDirect
 
 setEdgeLineWidthDirect
 
