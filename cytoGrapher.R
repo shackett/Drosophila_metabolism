@@ -254,6 +254,102 @@ for(i in 1:length(nodeOver[,1])){
 	rxn_nodes[nodeOver$reaction[i],] <- unlist(nodeOver[i,-1])
 	}
 
+library(RCytoscape)
+
+mel_graph <- new("graphNEL", edgemode = "directed")
+mel_graph <- initNodeAttribute(graph = mel_graph, attribute.name = "moleculeType", attribute.type = "char", default.value = "undefined")
+mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "edgeType", attribute.type = "char", default.value = "produces")
+mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "weights", attribute.type = "numeric", default.value = 1)
+mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "weight", attribute.type = "numeric", default.value = 1)
+#specify metabolite nodes
+for(mets in 1:length(met_pos[,1])){
+	if(is.nan(met_pos[mets,1])){print(paste(mets, " NaN", collapse = " "))}
+	if(!is.na(met_pos[mets,1])){
+		mel_graph <- graph::addNode(rownames(met_pos)[mets], mel_graph)
+		nodeData(mel_graph, rownames(met_pos)[mets], "moleculeType") <- "primaryMet"
+		}
+	}
+#setNodePosition(mel_graph, rownames(met_pos)[!is.na(met_pos[,1])], met_pos$x[!is.na(met_pos[,1])], met_pos$y[!is.na(met_pos[,1])])
+#specify substrate/product linker nodes
+for(rxns in 1:length(rxn_nodes[,1])){
+	if(is.nan(rxn_nodes[rxns,1])){print(paste(rxns, " NaN", collapse = " "))}
+	if(!is.na(rxn_nodes[rxns,1])){
+		for(x in c("sub", "prod")){
+			mel_graph <- graph::addNode(paste(rownames(rxn_nodes)[rxns], x, sep = "_"), mel_graph)
+			nodeData(mel_graph, paste(rownames(rxn_nodes)[rxns], x, sep = "_"), "moleculeType") <- "spNode"
+			}
+		}
+	}
+#specify edges
+for(rx in 1:length(stoisub[1,])){
+	
+	rxn_stoi <- stoisub[,rx][stoisub[,rx] != 0]
+	cofactor_change <- rxn_stoi[names(rxn_stoi) %in% cofactors]
+	if(length(cofactor_change) != 0){
+	cofactor_change <- cofactor_change[names(cofactor_change) %in% cofactor.rxns$cofactor[cofactor.rxns$cofactor %in% names(cofactor_change)][sapply(cofactor.list[cofactor.rxns$cofactor %in% names(cofactor_change)], function(x){!(rx %in% x)})]]
+		}
+	
+	
+	principal_change <-  rxn_stoi[!(names(rxn_stoi) %in% names(cofactor_change))]
+	 
+	if(sum(names(principal_change) %in% split.metab[,1]) != 0){
+		
+		meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){rx %in% x}),]
+		for(i in 1:length(meta_switch[,1])){
+			names(principal_change)[names(principal_change) == meta_switch[i,1]] <- meta_switch$new_name[i]
+			}
+		}
+	
+	if(length(principal_change[principal_change < 0]) > 0){	
+		mel_graph <- graph::addEdge(names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), mel_graph, unname(abs(principal_change[principal_change < 0])))
+		edgeData(mel_graph, names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), "weights") <- unname(abs(principal_change[principal_change < 0]))
+		edgeData(mel_graph, names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), "edgeType") <- "produced"
+		
+		}
+	if(length(principal_change[principal_change > 0]) > 0){
+	 	mel_graph <- graph::addEdge(paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), mel_graph)
+	 	edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), "weights") <- unname(abs(principal_change[principal_change > 0]))
+	 	edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), "edgeType") <- "consumed"
+	 	}
+	 	mel_graph <- addEdge(paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), mel_graph)
+		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "weights") <- 1
+		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "edgeType") <- "reacts"
+	}
+
+#eda.names(mel_graph)
+#eda(mel_graph, "weights")
+
+plotter = new.CytoscapeWindow("mel_graph9", graph = mel_graph)
+#specify node positioning
+#options(error = recover)
+#options(help.ports=2120)
+displayGraph(plotter)
+
+setNodePosition(plotter, rownames(met_pos)[!is.na(met_pos[,1])], met_pos$x[!is.na(met_pos[,1])], met_pos$y[!is.na(met_pos[,1])])
+
+setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"),rxn_nodes[,1][!is.na(rxn_nodes[,1])], rxn_nodes[,2][!is.na(rxn_nodes[,1])])
+setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,3])], "prod", sep = "_"),rxn_nodes[,3][!is.na(rxn_nodes[,3])], rxn_nodes[,4][!is.na(rxn_nodes[,3])])	
+
+#displayGraph(plotter)
+#options
+#setDefaultNodeShape
+setDefaultNodeSize(plotter, 2)
+setDefaultNodeFontSize(plotter, 2)
+
+
+#layout(plotter, layout.name = "grid")
+redraw(plotter)
+
+
+#setGraph(plotter, mel_graph)
+
+
+
+
+
+
+
+
 
 	
 	
