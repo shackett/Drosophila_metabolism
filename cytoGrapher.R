@@ -6,7 +6,7 @@ library(gplots)
 library(combinat)
 
 organism = "yeast"
-max.add.new <- 50
+max.add.new <- 2000
 
 if(organism == "mel"){
 
@@ -294,26 +294,47 @@ rxn_added[rxn_to_do] <- TRUE
 
 }
 
+
+
 #overwrite some nodes with pre-specified coordinates
 for(i in 1:length(nodeOver[,1])){
 	rxn_nodes[nodeOver$reaction[i],] <- unlist(nodeOver[i, colnames(nodeOver) %in% c("xsub", "ysub", "xprod", "yprod")])
 	}
+	
+	
 
-if(organism == "yeast"){
-	lapply(met_pos, 1, 
-	}
-	
-	
+
+
+
+
+
+
 ########## Add the created reaction diagram to cytoscape and specify attributes allowing for flexible visualization ######
 
 library(RCytoscape)
 
 mel_graph <- new("graphNEL", edgemode = "directed")
 mel_graph <- initNodeAttribute(graph = mel_graph, attribute.name = "moleculeType", attribute.type = "char", default.value = "undefined")
+mel_graph <- initNodeAttribute(graph = mel_graph, attribute.name = "name", attribute.type = "char", default.value = "undefined")
+
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "edgeType", attribute.type = "char", default.value = "produces")
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "weights", attribute.type = "numeric", default.value = 1)
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "weight", attribute.type = "numeric", default.value = 1)
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "reaction", attribute.type = "char", default.value = "undefined")
+
+met_pos <- data.frame(met_pos, display_name = rownames(met_pos), stringsAsFactors = FALSE)
+met_pos <- data.frame(rxn_nodes, display_name = rownames(met_pos), stringsAsFactors = FALSE)
+
+for(i in 1:length(met_pos[,1])){
+		if(rownames(met_pos)[i] %in% metSty$SpeciesID){
+			rownames(met_pos)[i] <- paste(metSty[metSty$SpeciesID == rownames(met_pos)[i],c(2:3)], collapse = "_")
+			
+			}}
+	for(i in 1:length(rxn_nodes[,1])){
+		if(rownames(rxn_nodes)[i] %in% rxnSty$ReactionID[!is.na(rxnSty$Reaction)]){
+			rownames(rxn_nodes)[i] <- paste(rxnSty[rxnSty$ReactionID == rownames(rxn_nodes)[i],c(2:3)], collapse = "_")
+			}}
+
 
 #specify metabolite nodes
 for(mets in 1:length(met_pos[,1])){
@@ -340,19 +361,21 @@ for(rx in 1:length(stoisub[1,])){
 	rxn_stoi <- stoisub[,rx][stoisub[,rx] != 0]
 	cofactor_change <- rxn_stoi[names(rxn_stoi) %in% cofactors]
 	if(length(cofactor_change) != 0){
-	cofactor_change <- cofactor_change[names(cofactor_change) %in% cofactor.rxns$cofactor[cofactor.rxns$cofactor %in% names(cofactor_change)][sapply(cofactor.list[cofactor.rxns$cofactor %in% names(cofactor_change)], function(x){!(rx %in% x)})]]
+	cofactor_change <- cofactor_change[names(cofactor_change) %in% cofactor.rxns$cofactor[cofactor.rxns$cofactor %in% names(cofactor_change)][sapply(cofactor.list[cofactor.rxns$cofactor %in% names(cofactor_change)], function(x){!(colnames(stoisub)[rx] %in% x)})]]
 		}
 	
-	
 	principal_change <-  rxn_stoi[!(names(rxn_stoi) %in% names(cofactor_change))]
-	 
+		 
 	if(sum(names(principal_change) %in% split.metab[,1]) != 0){
 		
-		meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){rx %in% x}),]
+		meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){colnames(stoisub)[rx] %in% x}),]
+		#meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){rx %in% x}),]
 		for(i in 1:length(meta_switch[,1])){
 			names(principal_change)[names(principal_change) == meta_switch[i,1]] <- meta_switch$new_name[i]
 			}
-		}
+			}
+	
+	if(!is.na(rxn_nodes[rx,1])){
 	
 	if(length(principal_change[principal_change < 0]) > 0){	
 		mel_graph <- graph::addEdge(names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), mel_graph, unname(abs(principal_change[principal_change < 0])))
@@ -371,12 +394,12 @@ for(rx in 1:length(stoisub[1,])){
 		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "weights") <- 1
 		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "edgeType") <- "reacts"
 		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "reaction") <- rownames(rxn_nodes)[rx]
-	}
+	}}
 
 #eda.names(mel_graph)
 #eda(mel_graph, "weights")
 
-plotter = new.CytoscapeWindow("mel_graph14", graph = mel_graph)
+plotter = new.CytoscapeWindow("mel_graph1", graph = mel_graph)
 #specify node positioning
 #options(error = recover)
 #options(help.ports=2120)
@@ -384,7 +407,7 @@ displayGraph(plotter)
 
 setNodePosition(plotter, rownames(met_pos)[!is.na(met_pos[,1])], met_pos$x[!is.na(met_pos[,1])], -1*met_pos$y[!is.na(met_pos[,1])])
 setNodeColorDirect(plotter, rownames(met_pos)[!is.na(met_pos[,1])], rgb(0.6,0.2,0.3))
-setNodeLabelColorDirect(obj, node.names, new.color)
+#setNodeLabelColorDirect(obj, node.names, new.color)
 
 setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"),rxn_nodes[,1][!is.na(rxn_nodes[,1])], -1*rxn_nodes[,2][!is.na(rxn_nodes[,1])])
 setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,3])], "prod", sep = "_"),rxn_nodes[,3][!is.na(rxn_nodes[,3])], -1*rxn_nodes[,4][!is.na(rxn_nodes[,3])])	
@@ -400,13 +423,37 @@ setDefaultNodeSize(plotter, 2)
 setDefaultNodeFontSize(plotter, 0.5)
 
 setEdgeLabelRule(plotter, "reaction")
-
+setDefaultEdgeFontSize(plotter, 0.5)
 #setNodeLabelRule()
 
 
-setEdgeLabelRule(obj, edge.attribute.name)
-setEdgeLabelWidthDirect(obj, edge.names, new.value)
+#setEdgeLabelRule(obj, edge.attribute.name)
+#setEdgeLabelWidthDirect(obj, edge.names, new.value)
 #add in 2 more nodes between the sub/prod node and cofactors emerging from them
+
+
+
+
+if(organism == "yeast"){
+	
+	comp_members <- rownames(stoisub)[stoisub[,colnames(stoisub) == "composition"] != 0]
+	lapply(rownames(met_pos)[!is.na(met_pos[,1])], function(x){
+		setNodeColorDirect(plotter, x, ifelse(x %in% comp_members, rgb(0.9,0.4,0.2), rgb(0.2,0.4,0.8)))
+		})
+	
+	
+	for(i in 1:length(met_pos[,1])){
+		if(rownames(met_pos)[i] %in% metSty$SpeciesID){
+			rownames(met_pos)[i] <- paste(metSty[metSty$SpeciesID == rownames(met_pos)[i],c(2:3)], collapse = "_")
+			
+			}}
+	for(i in 1:length(rxn_nodes[,1])){
+		if(rownames(rxn_nodes)[i] %in% rxnSty$ReactionID[!is.na(rxnSty$Reaction)]){
+			rownames(rxn_nodes)[i] <- paste(rxnSty[rxnSty$ReactionID == rownames(rxn_nodes)[i],c(2:3)], collapse = "_")
+			}}
+			}
+
+
 
 
 
