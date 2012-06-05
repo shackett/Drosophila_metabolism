@@ -45,11 +45,21 @@ if(organism == "yeast"){
 	metab.coord <- metSty[!is.na(metSty$x),]
 	nodeOver <- rxnSty[!is.na(rxnSty$xsub),]
 	
+	
+	#determine node degree
+	#hist(apply(stoisub != 0, 1, sum)[apply(stoisub != 0, 1, sum) < 50], breaks = 20)
+	high_degree <- c(apply(stoisub != 0, 1, sum) > 5 | !(metSty$Compartment %in% c("c_02", "c_10"))); high_degree <- names(high_degree[high_degree == TRUE])
+	
+	
 	cofactor.rxns <- read.delim("Layout/cofactor_exceptions.txt", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+	tmp <- data.frame(high_degree[!(high_degree %in% cofactor.rxns$cofactor)], "", "", "", "", ""); colnames(tmp) <- colnames(cofactor.rxns)
+	cofactor.rxns <- rbind(cofactor.rxns, tmp)
+	
 	cofactor.list <- list()
 	for(i in 1:length(cofactor.rxns[,1])){
 		cofactor.list[[i]] <- strsplit(cofactor.rxns$reaction[i], split = ", ")[[1]]
 		}
+		
 	
 	#fix split.metab
 	split.metab <- read.delim("Layout/met_split.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
@@ -66,7 +76,7 @@ if(organism == "yeast"){
 #c(1:length(stoisub[1,]))[c(1:length(rxn_nodes[,1]))[is.na(rxn_nodes)[,1]]]
 
 
-plot(metab.coord$y ~ metab.coord$x, ylim = c(-100,100), xlim = c(-100,100), pch = 16)
+plot(metab.coord$y ~ metab.coord$x, pch = 16)
 
 arm_lengths <- 2
 arm_ratio <- 1
@@ -319,22 +329,23 @@ mel_graph <- initNodeAttribute(graph = mel_graph, attribute.name = "name", attri
 
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "edgeType", attribute.type = "char", default.value = "produces")
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "weights", attribute.type = "numeric", default.value = 1)
-mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "weight", attribute.type = "numeric", default.value = 1)
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "reaction", attribute.type = "char", default.value = "undefined")
+mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "reactionName", attribute.type = "char", default.value = "undefined")
+
 
 met_pos <- data.frame(met_pos, display_name = rownames(met_pos), stringsAsFactors = FALSE)
-met_pos <- data.frame(rxn_nodes, display_name = rownames(met_pos), stringsAsFactors = FALSE)
+rxn_nodes <- data.frame(rxn_nodes, display_name = rownames(rxn_nodes), stringsAsFactors = FALSE)
 
+if(organism == "yeast"){
 for(i in 1:length(met_pos[,1])){
-		if(rownames(met_pos)[i] %in% metSty$SpeciesID){
-			rownames(met_pos)[i] <- paste(metSty[metSty$SpeciesID == rownames(met_pos)[i],c(2:3)], collapse = "_")
-			
-			}}
-	for(i in 1:length(rxn_nodes[,1])){
-		if(rownames(rxn_nodes)[i] %in% rxnSty$ReactionID[!is.na(rxnSty$Reaction)]){
-			rownames(rxn_nodes)[i] <- paste(rxnSty[rxnSty$ReactionID == rownames(rxn_nodes)[i],c(2:3)], collapse = "_")
-			}}
-
+	if(rownames(met_pos)[i] %in% metSty$SpeciesID){
+		met_pos$display_name[i] <- paste(metSty[metSty$SpeciesID == rownames(met_pos)[i],c(2:3)], collapse = "_")
+		}}
+for(i in 1:length(rxn_nodes[,1])){
+	if(rownames(rxn_nodes)[i] %in% rxnSty$ReactionID[!is.na(rxnSty$Reaction)]){
+		rxn_nodes$display_name[i] <- paste(rxnSty[rxnSty$ReactionID == rownames(rxn_nodes)[i],c(2:3)], collapse = "_")
+		}}
+	}
 
 #specify metabolite nodes
 for(mets in 1:length(met_pos[,1])){
@@ -342,6 +353,7 @@ for(mets in 1:length(met_pos[,1])){
 	if(!is.na(met_pos[mets,1])){
 		mel_graph <- graph::addNode(rownames(met_pos)[mets], mel_graph)
 		nodeData(mel_graph, rownames(met_pos)[mets], "moleculeType") <- "primaryMet"
+		nodeData(mel_graph, rownames(met_pos)[mets], "name") <- met_pos$display_name[mets]
 		}
 	}
 #setNodePosition(mel_graph, rownames(met_pos)[!is.na(met_pos[,1])], met_pos$x[!is.na(met_pos[,1])], met_pos$y[!is.na(met_pos[,1])])
@@ -352,6 +364,7 @@ for(rxns in 1:length(rxn_nodes[,1])){
 		for(x in c("sub", "prod")){
 			mel_graph <- graph::addNode(paste(rownames(rxn_nodes)[rxns], x, sep = "_"), mel_graph)
 			nodeData(mel_graph, paste(rownames(rxn_nodes)[rxns], x, sep = "_"), "moleculeType") <- "spNode"
+			nodeData(mel_graph, paste(rownames(rxn_nodes)[rxns], x, sep = "_"), "name") <- rxn_nodes$display_name[rxns]
 			}
 		}
 	}
@@ -378,28 +391,30 @@ for(rx in 1:length(stoisub[1,])){
 	if(!is.na(rxn_nodes[rx,1])){
 	
 	if(length(principal_change[principal_change < 0]) > 0){	
-		mel_graph <- graph::addEdge(names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), mel_graph, unname(abs(principal_change[principal_change < 0])))
+		mel_graph <- graph::addEdge(names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), mel_graph)
 		edgeData(mel_graph, names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), "weights") <- unname(abs(principal_change[principal_change < 0]))
 		edgeData(mel_graph, names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), "edgeType") <- "produced"
 		edgeData(mel_graph, names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), "reaction") <- rownames(rxn_nodes)[rx]
 		
 		}
 	if(length(principal_change[principal_change > 0]) > 0){
-	 	mel_graph <- graph::addEdge(paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), mel_graph, unname(abs(principal_change[principal_change > 0])))
+	 	mel_graph <- graph::addEdge(paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), mel_graph)
 	 	edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), "weights") <- unname(abs(principal_change[principal_change > 0]))
 	 	edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), "edgeType") <- "consumed"
 	 	edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), "reaction") <- rownames(rxn_nodes)[rx]
 	 	}
-	 	mel_graph <- addEdge(paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), mel_graph, 1)
+	 	
+	 	mel_graph <- addEdge(paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), mel_graph)
 		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "weights") <- 1
 		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "edgeType") <- "reacts"
 		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "reaction") <- rownames(rxn_nodes)[rx]
+		edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), "reactionName") <- rxn_nodes$display_name[rx]
 	}}
 
 #eda.names(mel_graph)
 #eda(mel_graph, "weights")
 
-plotter = new.CytoscapeWindow("mel_graph1", graph = mel_graph)
+plotter = new.CytoscapeWindow("mel_graph9", graph = mel_graph)
 #specify node positioning
 #options(error = recover)
 #options(help.ports=2120)
@@ -421,6 +436,7 @@ setNodeSizeDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "pr
 
 setDefaultNodeSize(plotter, 2)
 setDefaultNodeFontSize(plotter, 0.5)
+setNodeLabelRule(plotter, "name")
 
 setEdgeLabelRule(plotter, "reaction")
 setDefaultEdgeFontSize(plotter, 0.5)
@@ -440,18 +456,7 @@ if(organism == "yeast"){
 	lapply(rownames(met_pos)[!is.na(met_pos[,1])], function(x){
 		setNodeColorDirect(plotter, x, ifelse(x %in% comp_members, rgb(0.9,0.4,0.2), rgb(0.2,0.4,0.8)))
 		})
-	
-	
-	for(i in 1:length(met_pos[,1])){
-		if(rownames(met_pos)[i] %in% metSty$SpeciesID){
-			rownames(met_pos)[i] <- paste(metSty[metSty$SpeciesID == rownames(met_pos)[i],c(2:3)], collapse = "_")
-			
-			}}
-	for(i in 1:length(rxn_nodes[,1])){
-		if(rownames(rxn_nodes)[i] %in% rxnSty$ReactionID[!is.na(rxnSty$Reaction)]){
-			rownames(rxn_nodes)[i] <- paste(rxnSty[rxnSty$ReactionID == rownames(rxn_nodes)[i],c(2:3)], collapse = "_")
-			}}
-			}
+	}
 
 
 
@@ -465,6 +470,9 @@ if(organism == "yeast"){
 #getArrowShapes(plotter)
 #setEdgeTargetArrowRule
 #add flux value - either effects edge width or color
+
+if(organism == "mel"){
+
 load("LHPC_resp.Rdata")
 library(colorRamps)
 lh_pc[,1] <- lh_pc[,1]*-1
@@ -486,8 +494,15 @@ for(x in c(1:length(eda(mel_graph, "weights")))){
 			setEdgeColorDirect(plotter, cy2.edge.names(mel_graph)[x], colorz[col_index[rownames(col_index) %in% rxn,pc_num]+1])
 			}}
 
+	}
+
 #source the options in this script and save the model positioning part
 redraw(plotter)
+
+#get a node position
+
+getNodePosition(obj, node.names)
+getNodePosition(plotter, "s_0356")
 
 
 
