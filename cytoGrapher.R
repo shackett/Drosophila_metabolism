@@ -46,6 +46,7 @@ if(organism == "yeast"){
 	rownames(rxnSty) <- NULL
 	
 	metab.coord <- metSty[!is.na(metSty$x),]
+	
 	nodeOver <- rxnSty[!is.na(rxnSty$xsub),]
 	
 	
@@ -80,7 +81,7 @@ if(organism == "yeast"){
 	}
 
 ######
-check_rxns <- c("s_0692", "s_0434")
+check_rxns <- c("s_0749", "s_1277")
 little_mat <- stoisub[metSty[,1] %in% check_rxns,][,apply(stoisub[metSty[,1] %in% check_rxns,] != 0, 2, sum) != 0]
 mat_names <- unlist(sapply(colnames(little_mat), function(x){rxnSty$Reaction[rxnSty$ReactionID == x]}))
 cbind(t(little_mat), mat_names)
@@ -163,12 +164,12 @@ for(rx in rxn_to_do){
 	
 	#determine whether a metabolite should be renamed (to allow for better layout...)
 	
-	if(sum(names(rxn_stoi) %in% split.metab[,1]) != 0){
+	if(sum(names(principal_change) %in% split.metab[,1]) != 0){
 		
-		meta_switch <- split.metab[split.metab$metabolite %in% names(rxn_stoi),][sapply(rxn.list[split.metab$metabolite %in% names(rxn_stoi)], function(x){colnames(stoisub)[rx] %in% x}),]
+		meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){colnames(stoisub)[rx] %in% x}),]
 		
 		for(i in 1:length(meta_switch[,1])){
-			names(rxn_stoi)[names(rxn_stoi) == meta_switch[i,1]] <- meta_switch$new_name[i]
+			names(principal_change)[names(principal_change) == meta_switch[i,1]] <- meta_switch$new_name[i]
 			}
 			#if(length(meta_switch) != 0){print(rx)}
 		}
@@ -441,7 +442,7 @@ for(rx in 1:length(stoisub[1,])){
 #eda.names(mel_graph)
 #eda(mel_graph, "weights")
 
-plotter = new.CytoscapeWindow("yeastie1", graph = mel_graph)
+plotter = new.CytoscapeWindow("yeastie2", graph = mel_graph)
 #specify node positioning
 #options(error = recover)
 #options(help.ports=2120)
@@ -535,13 +536,32 @@ redraw(plotter)
 
 nodePos <- matrix(unlist(getNodePosition(plotter, rownames(met_pos)[!is.na(met_pos$x)])), ncol = 2, byrow = TRUE)
 nodeName <- rownames(met_pos)[!is.na(met_pos$x)]
-all_mets <- metSty[,1]
-bind_frame <- data.frame(temp1 = rep(NA, times = length(all_mets)), temp2 = rep(NA, times = length(all_mets)))
-colnames(bind_frame) <- c((paste("x", (length(metSty[1,]) - 3)/2, sep = "")), (paste("y", (length(metSty[1,]) - 3)/2, sep = "")))
-for(i in 1:length(nodeName)){
-	bind_frame[all_mets == nodeName[i],] <- nodePos[i,]
-		}
-joint.table <- data.frame(metSty, bind_frame)
+allNodes <- sort(union(nodeName,  metSty[,1]))
+
+new_mat <- as.data.frame(matrix(NA, nrow = length(allNodes), ncol = length(metSty[1,])+2), stringsAsFactors = FALSE)
+rownames(new_mat) <- sort(allNodes); colnames(new_mat) <- c(colnames(metSty), (paste("x", (length(metSty[1,]) - 3)/2, sep = "")), (paste("y", (length(metSty[1,]) - 3)/2, sep = "")))
+
+for(n in 1:length(allNodes)){
+	if(allNodes[n] %in% nodeName){
+		new_mat[n,(length(metSty[1,])+1):(length(metSty[1,])+2)] <- nodePos[nodeName == allNodes[n],]
+		if(allNodes[n] %in% metSty$SpeciesID){
+			new_mat[n,-((length(metSty[1,])+1):(length(metSty[1,])+2))] <- metSty[metSty$SpeciesID == allNodes[n],]
+			}else{
+				new_mat[n,1] <- allNodes[n]
+				new_mat[n,c(2:3)] <- metSty[metSty$SpeciesID == split.metab[split.metab$new_name == allNodes[n],]$metabolite,][c(2,3)]
+				}
+			}else{
+				new_mat[n,-((length(metSty[1,])+1):(length(metSty[1,])+2))] <- metSty[metSty$SpeciesID == allNodes[n],]
+				}}
+joint.table <- new_mat	
+
+#all_mets <- metSty[,1]
+#bind_frame <- data.frame(temp1 = rep(NA, times = length(all_mets)), temp2 = rep(NA, times = length(all_mets)))
+#colnames(bind_frame) <- c((paste("x", (length(metSty[1,]) - 3)/2, sep = "")), (paste("y", (length(metSty[1,]) - 3)/2, sep = "")))
+#for(i in 1:length(nodeName)){
+#	bind_frame[all_mets == nodeName[i],] <- nodePos[i,]
+#		}
+#joint.table <- data.frame(metSty, bind_frame)
 write.table(joint.table, file = "joint.table.tsv", sep = "\t", col.names = TRUE, row.names = FALSE)
 
 
@@ -551,7 +571,7 @@ getNodePosition(obj, node.names)
 
 getNodePosition(plotter, rownames(met_pos))
 
-metSty; 
+ 
 
 
 
