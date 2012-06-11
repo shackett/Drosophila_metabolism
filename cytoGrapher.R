@@ -38,9 +38,12 @@ if(organism == "yeast"){
 	#reorder metSty and rxnSty to reflect the row and column names of S
 	metSty = read.delim("metSty.tsv", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 	metSty <- metSty[sapply(c(1:length(metSty[,1])), function(x){c(1:length(metSty[,1]))[metSty$SpeciesID == rownames(stoisub)[x]]}),]
+	rownames(metSty) <- NULL
+	metSty$y <- metSty$y*-1
 	
 	rxnSty = read.delim("rxnSty.tsv", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 	rxnSty <- rxnSty[sapply(c(1:length(rxnSty[,1])), function(x){c(1:length(rxnSty[,1]))[rxnSty$ReactionID == colnames(stoisub)[x]]}),]
+	rownames(rxnSty) <- NULL
 	
 	metab.coord <- metSty[!is.na(metSty$x),]
 	nodeOver <- rxnSty[!is.na(rxnSty$xsub),]
@@ -48,16 +51,21 @@ if(organism == "yeast"){
 	
 	#determine node degree
 	#hist(apply(stoisub != 0, 1, sum)[apply(stoisub != 0, 1, sum) < 50], breaks = 20)
-	high_degree <- c(apply(stoisub != 0, 1, sum) > 5 | !(metSty$Compartment %in% c("c_02", "c_10"))); high_degree <- names(high_degree[high_degree == TRUE])
-	
+	#high_degree <- c(apply(stoisub != 0, 1, sum) > 7 | !(metSty$Compartment %in% c("c_02"))); high_degree <- names(high_degree[high_degree == TRUE])
+	high_degree <- c(!(metSty$Compartment %in% c("c_02"))); high_degree <- metSty[,1][high_degree]
 	
 	cofactor.rxns <- read.delim("Layout/cofactor_exceptions.txt", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
-	tmp <- data.frame(high_degree[!(high_degree %in% cofactor.rxns$cofactor)], "", "", "", "", ""); colnames(tmp) <- colnames(cofactor.rxns)
+	
+	tmp <- data.frame(high_degree[!(high_degree %in% cofactor.rxns$cofactor)], "", "", "", "", "", ""); colnames(tmp) <- colnames(cofactor.rxns)
 	cofactor.rxns <- rbind(cofactor.rxns, tmp)
 	
 	cofactor.list <- list()
 	for(i in 1:length(cofactor.rxns[,1])){
 		cofactor.list[[i]] <- strsplit(cofactor.rxns$reaction[i], split = ", ")[[1]]
+		temp_inv <- strsplit(cofactor.rxns$inverse_rxn[i], split = ", ")[[1]]
+		if(length(temp_inv) != 0){
+			cofactor.list[[i]] <- union(cofactor.list[[i]], names(stoisub[rownames(stoisub) == cofactor.rxns$cofactor[i],][stoisub[rownames(stoisub) == cofactor.rxns$cofactor[i],] != 0])[!(names(stoisub[rownames(stoisub) == cofactor.rxns$cofactor[i],][stoisub[rownames(stoisub) == cofactor.rxns$cofactor[i],] != 0]) %in% temp_inv)])
+			}
 		}
 		
 	
@@ -71,12 +79,20 @@ if(organism == "yeast"){
 	
 	}
 
+######
+check_rxns <- c("s_0692", "s_0434")
+little_mat <- stoisub[metSty[,1] %in% check_rxns,][,apply(stoisub[metSty[,1] %in% check_rxns,] != 0, 2, sum) != 0]
+mat_names <- unlist(sapply(colnames(little_mat), function(x){rxnSty$Reaction[rxnSty$ReactionID == x]}))
+cbind(t(little_mat), mat_names)
+#stoisub[apply(stoisub[,colnames(stoisub) %in% colnames(little_mat)] != 0, 1, sum) != 0, colnames(stoisub) %in% colnames(little_mat)]
+
+
 #sort(rownames(stoisub)[!(rownames(stoisub) %in% metab.coord$Metabolite)])
 #colnames(stoisub)[c(1:length(rxn_nodes[,1]))[is.na(rxn_nodes)[,1]]]
 #c(1:length(stoisub[1,]))[c(1:length(rxn_nodes[,1]))[is.na(rxn_nodes)[,1]]]
 
 
-plot(metab.coord$y ~ metab.coord$x, pch = 16)
+#plot(metab.coord$y ~ metab.coord$x, pch = 16)
 
 arm_lengths <- 2
 arm_ratio <- 1
@@ -120,6 +136,7 @@ rxn_added[rxn_to_do] <- TRUE
 rxn_to_do <- rxn_to_do[!(rxn_to_do %in% c(1:length(stoisub[1,]))[colnames(stoisub) == "composition"])]
  
 #within each iteration determine the reactions that haven't already been layed out and are connected to at least one already defined specie
+#tmp <- c(1:length(stoisub[1,]))[colnames(stoisub) == "r_0510"]
 
 while(length(rxn_to_do) != 0){
 
@@ -131,24 +148,34 @@ for(rx in rxn_to_do){
 	
 	#determine which species are products, substrates and which should be treated as cofactors
 	#if(rx == 90){die}
+	
+	#specify the reaction products and reactants
 	rxn_stoi <- stoisub[,rx][stoisub[,rx] != 0]
+	
+	#determine whether a metabolite should be a fully connected node or one that is only associated with this single reaction (a cofactor)
+	
 	cofactor_change <- rxn_stoi[names(rxn_stoi) %in% cofactors]
+	
 	if(length(cofactor_change) != 0){
 	cofactor_change <- cofactor_change[names(cofactor_change) %in% cofactor.rxns$cofactor[cofactor.rxns$cofactor %in% names(cofactor_change)][sapply(cofactor.list[cofactor.rxns$cofactor %in% names(cofactor_change)], function(x){!(colnames(stoisub)[rx] %in% x)})]]
 		}
-	
 	principal_change <-  rxn_stoi[!(names(rxn_stoi) %in% names(cofactor_change))]
-		 
-	if(sum(names(principal_change) %in% split.metab[,1]) != 0){
+	
+	#determine whether a metabolite should be renamed (to allow for better layout...)
+	
+	if(sum(names(rxn_stoi) %in% split.metab[,1]) != 0){
 		
-		meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){colnames(stoisub)[rx] %in% x}),]
-		#meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){rx %in% x}),]
+		meta_switch <- split.metab[split.metab$metabolite %in% names(rxn_stoi),][sapply(rxn.list[split.metab$metabolite %in% names(rxn_stoi)], function(x){colnames(stoisub)[rx] %in% x}),]
+		
 		for(i in 1:length(meta_switch[,1])){
-			names(principal_change)[names(principal_change) == meta_switch[i,1]] <- meta_switch$new_name[i]
+			names(rxn_stoi)[names(rxn_stoi) == meta_switch[i,1]] <- meta_switch$new_name[i]
 			}
 			#if(length(meta_switch) != 0){print(rx)}
 		}
-	 
+	
+	
+		 
+	
 	
 	 
 	odd_react <- odd(length(principal_change[principal_change < 0]))
@@ -395,8 +422,8 @@ for(rx in 1:length(stoisub[1,])){
 		edgeData(mel_graph, names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), "weights") <- unname(abs(principal_change[principal_change < 0]))
 		edgeData(mel_graph, names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), "edgeType") <- "produced"
 		edgeData(mel_graph, names(principal_change[principal_change < 0]), paste(rownames(rxn_nodes)[rx], "sub", sep = "_"), "reaction") <- rownames(rxn_nodes)[rx]
-		
 		}
+		
 	if(length(principal_change[principal_change > 0]) > 0){
 	 	mel_graph <- graph::addEdge(paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), mel_graph)
 	 	edgeData(mel_graph, paste(rownames(rxn_nodes)[rx], "prod", sep = "_"), names(principal_change[principal_change > 0]), "weights") <- unname(abs(principal_change[principal_change > 0]))
@@ -414,7 +441,7 @@ for(rx in 1:length(stoisub[1,])){
 #eda.names(mel_graph)
 #eda(mel_graph, "weights")
 
-plotter = new.CytoscapeWindow("mel_graph9", graph = mel_graph)
+plotter = new.CytoscapeWindow("yeastie1", graph = mel_graph)
 #specify node positioning
 #options(error = recover)
 #options(help.ports=2120)
@@ -439,7 +466,7 @@ setDefaultNodeFontSize(plotter, 0.5)
 setNodeLabelRule(plotter, "name")
 
 setEdgeLabelRule(plotter, "reaction")
-setDefaultEdgeFontSize(plotter, 0.5)
+setDefaultEdgeFontSize(plotter, 0.1)
 #setNodeLabelRule()
 
 
@@ -499,12 +526,32 @@ for(x in c(1:length(eda(mel_graph, "weights")))){
 #source the options in this script and save the model positioning part
 redraw(plotter)
 
+
+
+
+
+
+
+
+nodePos <- matrix(unlist(getNodePosition(plotter, rownames(met_pos)[!is.na(met_pos$x)])), ncol = 2, byrow = TRUE)
+nodeName <- rownames(met_pos)[!is.na(met_pos$x)]
+all_mets <- metSty[,1]
+bind_frame <- data.frame(temp1 = rep(NA, times = length(all_mets)), temp2 = rep(NA, times = length(all_mets)))
+colnames(bind_frame) <- c((paste("x", (length(metSty[1,]) - 3)/2, sep = "")), (paste("y", (length(metSty[1,]) - 3)/2, sep = "")))
+for(i in 1:length(nodeName)){
+	bind_frame[all_mets == nodeName[i],] <- nodePos[i,]
+		}
+joint.table <- data.frame(metSty, bind_frame)
+write.table(joint.table, file = "joint.table.tsv", sep = "\t", col.names = TRUE, row.names = FALSE)
+
+
 #get a node position
-
 getNodePosition(obj, node.names)
-getNodePosition(plotter, "s_0356")
 
 
+getNodePosition(plotter, rownames(met_pos))
+
+metSty; 
 
 
 
