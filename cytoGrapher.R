@@ -37,8 +37,6 @@ if(organism == "yeast"){
 	
 	#reorder metSty and rxnSty to reflect the row and column names of S
 	metSty = read.delim("metSty.tsv", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-	metSty <- metSty[sapply(c(1:length(metSty[,1])), function(x){c(1:length(metSty[,1]))[metSty$SpeciesID == rownames(stoisub)[x]]}),]
-	rownames(metSty) <- NULL
 	metSty$y <- metSty$y*-1
 	
 	rxnSty = read.delim("rxnSty.tsv", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
@@ -53,12 +51,13 @@ if(organism == "yeast"){
 	#determine node degree
 	#hist(apply(stoisub != 0, 1, sum)[apply(stoisub != 0, 1, sum) < 50], breaks = 20)
 	#high_degree <- c(apply(stoisub != 0, 1, sum) > 7 | !(metSty$Compartment %in% c("c_02"))); high_degree <- names(high_degree[high_degree == TRUE])
-	high_degree <- c(!(metSty$Compartment %in% c("c_02"))); high_degree <- metSty[,1][high_degree]
+	#high_degree <- c(!(metSty$Compartment %in% c("c_02", "c_05", "c_10"))); high_degree <- metSty[,1][high_degree]
+	#high_degree <- NULL
 	
 	cofactor.rxns <- read.delim("Layout/cofactor_exceptions.txt", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 	
-	tmp <- data.frame(high_degree[!(high_degree %in% cofactor.rxns$cofactor)], "", "", "", "", "", ""); colnames(tmp) <- colnames(cofactor.rxns)
-	cofactor.rxns <- rbind(cofactor.rxns, tmp)
+	#tmp <- data.frame(high_degree[!(high_degree %in% cofactor.rxns$cofactor)], "", "", "", "", "", ""); colnames(tmp) <- colnames(cofactor.rxns)
+	#cofactor.rxns <- rbind(cofactor.rxns, tmp)
 	
 	cofactor.list <- list()
 	for(i in 1:length(cofactor.rxns[,1])){
@@ -70,6 +69,8 @@ if(organism == "yeast"){
 		}
 		
 	
+	rownames(stoisub)[stoisub[,696] != 0]
+	
 	#fix split.metab
 	split.metab <- read.delim("Layout/met_split.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 	rxn.list <- list()
@@ -77,14 +78,25 @@ if(organism == "yeast"){
 		rxn.list[[i]] <- strsplit(split.metab$reaction[i], split = ", ")[[1]]
 		}
 	
+	#read in flux values
+	flux_vals <- read.delim("carriedFlux.tsv", sep = "\t")
+	
 	
 	}
 
 ######
-check_rxns <- c("s_0749", "s_1277")
-little_mat <- stoisub[metSty[,1] %in% check_rxns,][,apply(stoisub[metSty[,1] %in% check_rxns,] != 0, 2, sum) != 0]
-mat_names <- unlist(sapply(colnames(little_mat), function(x){rxnSty$Reaction[rxnSty$ReactionID == x]}))
-cbind(t(little_mat), mat_names)
+#check_rxns <- c("s_1409", "s_1410")
+
+#little_mat <- t(stoisub[rownames(stoisub) %in% check_rxns, apply(stoisub[rownames(stoisub) %in% check_rxns,] != 0, 2, sum) != 0])
+#mat_names <- unlist(sapply(rownames(little_mat), function(x){rxnSty$Reaction[rxnSty$ReactionID == x]}))
+#cbind(little_mat, mat_names)
+
+#check_rxns <- "r_0745"
+
+#little_mat <- matrix(stoisub[,colnames(stoisub) == check_rxns], ncol = length(check_rxns))
+#rownames(little_mat) <- rownames(stoisub)
+#cbind(little_mat[apply(little_mat != 0, 1, sum) != 0,], sapply(names(little_mat[apply(little_mat != 0, 1, sum) != 0,]), function(x){metSty$SpeciesName[metSty$SpeciesID == x]}))
+
 #stoisub[apply(stoisub[,colnames(stoisub) %in% colnames(little_mat)] != 0, 1, sum) != 0, colnames(stoisub) %in% colnames(little_mat)]
 
 
@@ -120,15 +132,34 @@ for(met in 1:length(metab.coord[,1])){
 
 #reactions to be evaluated must have at least one already positioned substrate or product
 
-tmp_mat <- matrix(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],], ncol = length(stoisub[1,])); rownames(tmp_mat) <- rownames(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],])
+def_splits <- rownames(met_pos)[!is.na(met_pos[,1])][sapply(c(1:length(rownames(met_pos)[!is.na(met_pos[,1])])), function(x){rownames(met_pos)[!is.na(met_pos[,1])][x] %in% split.metab$new_name})]
+all_semi_defined <- union(rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0], split.metab$metabolite[split.metab$new_name %in% def_splits])
+
+tmp_mat <- matrix(stoisub[rownames(stoisub) %in% all_semi_defined,], ncol = length(stoisub[1,])); rownames(tmp_mat) <- rownames(stoisub[rownames(stoisub) %in% all_semi_defined,])
+tmp_mat[rownames(tmp_mat) %in% split.metab$metabolite[split.metab$new_name %in% def_splits],] <- 0
+colnames(tmp_mat) <- colnames(stoisub)
+
+for(k in 1:length(def_splits)){
+	tmp_mat[rownames(tmp_mat) == split.metab$metabolite[split.metab$new_name %in% def_splits][k], colnames(tmp_mat) %in% rxn.list[[c(1:length(split.metab[,1]))[split.metab$new_name == def_splits[k]]]]] <- 1
+	}
+
 def_cof <- rownames(tmp_mat) %in% cofactor.rxns$cofactor
 def_cof_index <- c(1:length(def_cof))[def_cof]
 for(met in c(1:sum(def_cof))){
-	tmp <- rep(0, times = length(stoisub[1,]))
-	tmp[colnames(stoisub) %in% (cofactor.list[[c(1:length(cofactor.rxns[,1]))[cofactor.rxns$cofactor %in% rownames(tmp_mat)[def_cof_index[met]]]]])] <- 1
-	#tmp[as.numeric(cofactor.list[[c(1:length(cofactor.rxns[,1]))[cofactor.rxns$cofactor %in% rownames(tmp_mat)[def_cof_index[met]]]]])] <- 1
+	tmp <- 	tmp_mat[def_cof_index[met],] 
+	tmp[!(colnames(stoisub) %in% (cofactor.list[[c(1:length(cofactor.rxns[,1]))[cofactor.rxns$cofactor %in% rownames(tmp_mat)[def_cof_index[met]]]]]))] <- 0
 	tmp_mat[def_cof_index[met],] <- tmp
 	}
+
+#tmp_mat <- matrix(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],], ncol = length(stoisub[1,])); rownames(tmp_mat) <- rownames(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],])
+#def_cof <- rownames(tmp_mat) %in% cofactor.rxns$cofactor
+#def_cof_index <- c(1:length(def_cof))[def_cof]
+#for(met in c(1:sum(def_cof))){
+#	tmp <- rep(0, times = length(stoisub[1,]))
+#	tmp[colnames(stoisub) %in% (cofactor.list[[c(1:length(cofactor.rxns[,1]))[cofactor.rxns$cofactor %in% rownames(tmp_mat)[def_cof_index[met]]]]])] <- 1
+	
+#	tmp_mat[def_cof_index[met],] <- tmp
+#	}
 
 rxn_to_do <- c(1:length(stoisub[1,]))[rxn_added == FALSE & apply(tmp_mat!= 0, 2, sum) != 0]
 
@@ -315,13 +346,22 @@ for(rx in rxn_to_do){
 					
 					}
 					
-				tmp_mat <- matrix(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],], ncol = length(stoisub[1,])); rownames(tmp_mat) <- rownames(stoisub[rownames(stoisub) %in% rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0],])
+	def_splits <- rownames(met_pos)[!is.na(met_pos[,1])][sapply(c(1:length(rownames(met_pos)[!is.na(met_pos[,1])])), function(x){rownames(met_pos)[!is.na(met_pos[,1])][x] %in% split.metab$new_name})]
+all_semi_defined <- union(rownames(met_pos)[apply(is.na(met_pos), 1, sum) == 0], split.metab$metabolite[split.metab$new_name %in% def_splits])
+
+tmp_mat <- matrix(stoisub[rownames(stoisub) %in% all_semi_defined,], ncol = length(stoisub[1,])); rownames(tmp_mat) <- rownames(stoisub[rownames(stoisub) %in% all_semi_defined,])
+tmp_mat[rownames(tmp_mat) %in% split.metab$metabolite[split.metab$new_name %in% def_splits],] <- 0
+colnames(tmp_mat) <- colnames(stoisub)
+
+for(k in 1:length(def_splits)){
+	tmp_mat[rownames(tmp_mat) == split.metab$metabolite[split.metab$new_name %in% def_splits][k], colnames(tmp_mat) %in% rxn.list[[c(1:length(split.metab[,1]))[split.metab$new_name == def_splits[k]]]]] <- 1
+	}
+
 def_cof <- rownames(tmp_mat) %in% cofactor.rxns$cofactor
 def_cof_index <- c(1:length(def_cof))[def_cof]
 for(met in c(1:sum(def_cof))){
-	tmp <- rep(0, times = length(stoisub[1,]))
-	tmp[colnames(stoisub) %in% (cofactor.list[[c(1:length(cofactor.rxns[,1]))[cofactor.rxns$cofactor %in% rownames(tmp_mat)[def_cof_index[met]]]]])] <- 1
-	#tmp[as.numeric(cofactor.list[[c(1:length(cofactor.rxns[,1]))[cofactor.rxns$cofactor %in% rownames(tmp_mat)[def_cof_index[met]]]]])] <- 1
+	tmp <- 	tmp_mat[def_cof_index[met],] 
+	tmp[!(colnames(stoisub) %in% (cofactor.list[[c(1:length(cofactor.rxns[,1]))[cofactor.rxns$cofactor %in% rownames(tmp_mat)[def_cof_index[met]]]]]))] <- 0
 	tmp_mat[def_cof_index[met],] <- tmp
 	}
 	
@@ -354,6 +394,7 @@ library(RCytoscape)
 mel_graph <- new("graphNEL", edgemode = "directed")
 mel_graph <- initNodeAttribute(graph = mel_graph, attribute.name = "moleculeType", attribute.type = "char", default.value = "undefined")
 mel_graph <- initNodeAttribute(graph = mel_graph, attribute.name = "name", attribute.type = "char", default.value = "undefined")
+mel_graph <- initNodeAttribute(graph = mel_graph, attribute.name = "compartment", attribute.type = "char", default.value = "undefined")
 
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "edgeType", attribute.type = "char", default.value = "produces")
 mel_graph <- initEdgeAttribute(graph = mel_graph, attribute.name = "weights", attribute.type = "numeric", default.value = 1)
@@ -368,7 +409,9 @@ if(organism == "yeast"){
 for(i in 1:length(met_pos[,1])){
 	if(rownames(met_pos)[i] %in% metSty$SpeciesID){
 		met_pos$display_name[i] <- paste(metSty[metSty$SpeciesID == rownames(met_pos)[i],c(2:3)], collapse = "_")
+		met_pos$comp[i] <- metSty$Compartment[metSty$SpeciesID == rownames(met_pos)[i]]
 		}}
+		
 for(i in 1:length(rxn_nodes[,1])){
 	if(rownames(rxn_nodes)[i] %in% rxnSty$ReactionID[!is.na(rxnSty$Reaction)]){
 		rxn_nodes$display_name[i] <- paste(rxnSty[rxnSty$ReactionID == rownames(rxn_nodes)[i],c(2:3)], collapse = "_")
@@ -382,6 +425,7 @@ for(mets in 1:length(met_pos[,1])){
 		mel_graph <- graph::addNode(rownames(met_pos)[mets], mel_graph)
 		nodeData(mel_graph, rownames(met_pos)[mets], "moleculeType") <- "primaryMet"
 		nodeData(mel_graph, rownames(met_pos)[mets], "name") <- met_pos$display_name[mets]
+		nodeData(mel_graph, rownames(met_pos)[mets], "compartment") <- met_pos$comp[mets]
 		}
 	}
 #setNodePosition(mel_graph, rownames(met_pos)[!is.na(met_pos[,1])], met_pos$x[!is.na(met_pos[,1])], met_pos$y[!is.na(met_pos[,1])])
@@ -398,7 +442,8 @@ for(rxns in 1:length(rxn_nodes[,1])){
 	}
 #specify edges
 for(rx in 1:length(stoisub[1,])){
-	
+#for(rx in 622:length(stoisub[1,])){
+		
 	rxn_stoi <- stoisub[,rx][stoisub[,rx] != 0]
 	cofactor_change <- rxn_stoi[names(rxn_stoi) %in% cofactors]
 	if(length(cofactor_change) != 0){
@@ -410,7 +455,7 @@ for(rx in 1:length(stoisub[1,])){
 	if(sum(names(principal_change) %in% split.metab[,1]) != 0){
 		
 		meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){colnames(stoisub)[rx] %in% x}),]
-		#meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){rx %in% x}),]
+		
 		for(i in 1:length(meta_switch[,1])){
 			names(principal_change)[names(principal_change) == meta_switch[i,1]] <- meta_switch$new_name[i]
 			}
@@ -442,14 +487,14 @@ for(rx in 1:length(stoisub[1,])){
 #eda.names(mel_graph)
 #eda(mel_graph, "weights")
 
-plotter = new.CytoscapeWindow("yeastie2", graph = mel_graph)
+plotter = new.CytoscapeWindow("yeastie3", graph = mel_graph)
 #specify node positioning
 #options(error = recover)
 #options(help.ports=2120)
 displayGraph(plotter)
 
 setNodePosition(plotter, rownames(met_pos)[!is.na(met_pos[,1])], met_pos$x[!is.na(met_pos[,1])], -1*met_pos$y[!is.na(met_pos[,1])])
-setNodeColorDirect(plotter, rownames(met_pos)[!is.na(met_pos[,1])], rgb(0.6,0.2,0.3))
+#setNodeColorDirect(plotter, rownames(met_pos)[!is.na(met_pos[,1])], rgb(0.6,0.2,0.3))
 #setNodeLabelColorDirect(obj, node.names, new.color)
 
 setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"),rxn_nodes[,1][!is.na(rxn_nodes[,1])], -1*rxn_nodes[,2][!is.na(rxn_nodes[,1])])
@@ -479,11 +524,23 @@ setDefaultEdgeFontSize(plotter, 0.1)
 
 
 if(organism == "yeast"){
+	col_mat <- matrix(col2rgb(rich.colors(length(unique(met_pos$comp)))), ncol = 3, byrow = TRUE)
+	#col_mat <- matrix(col2rgb(rainbow(7)), ncol = 3, byrow = TRUE)
+	color_index <- data.frame(compartment = sort(unique(met_pos$comp)), color = mapply(rgb, red = col_mat[,1]/255, green = col_mat[,2]/255, blue = col_mat[,3]/255), stringsAsFactors = FALSE)
 	
-	comp_members <- rownames(stoisub)[stoisub[,colnames(stoisub) == "composition"] != 0]
-	lapply(rownames(met_pos)[!is.na(met_pos[,1])], function(x){
-		setNodeColorDirect(plotter, x, ifelse(x %in% comp_members, rgb(0.9,0.4,0.2), rgb(0.2,0.4,0.8)))
-		})
+	for(mets in 1:length(met_pos[,1])){
+	if(!is.na(met_pos[mets,1])){
+		setNodeColorDirect(plotter, rownames(met_pos)[mets], color_index$color[color_index$compartment == met_pos$comp[mets]])
+		}
+	}
+
+	flux_vals
+	
+	
+	#comp_members <- rownames(stoisub)[stoisub[,colnames(stoisub) == "composition"] != 0]
+	#lapply(rownames(met_pos)[!is.na(met_pos[,1])], function(x){
+	#	setNodeColorDirect(plotter, x, ifelse(x %in% comp_members, rgb(0.9,0.4,0.2), rgb(0.2,0.4,0.8)))
+	#	})
 	}
 
 
@@ -539,7 +596,7 @@ nodeName <- rownames(met_pos)[!is.na(met_pos$x)]
 allNodes <- sort(union(nodeName,  metSty[,1]))
 
 new_mat <- as.data.frame(matrix(NA, nrow = length(allNodes), ncol = length(metSty[1,])+2), stringsAsFactors = FALSE)
-rownames(new_mat) <- sort(allNodes); colnames(new_mat) <- c(colnames(metSty), (paste("x", (length(metSty[1,]) - 3)/2, sep = "")), (paste("y", (length(metSty[1,]) - 3)/2, sep = "")))
+ rownames(new_mat) <- sort(allNodes); colnames(new_mat) <- c(colnames(metSty), (paste("x", (length(metSty[1,]) - 3)/2, sep = "")), (paste("y", (length(metSty[1,]) - 3)/2, sep = "")))
 
 for(n in 1:length(allNodes)){
 	if(allNodes[n] %in% nodeName){
