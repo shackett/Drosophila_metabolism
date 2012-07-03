@@ -91,11 +91,11 @@ if(organism == "yeast"){
 #mat_names <- unlist(sapply(rownames(little_mat), function(x){rxnSty$Reaction[rxnSty$ReactionID == x]}))
 #cbind(little_mat, mat_names)
 
-#check_rxns <- "r_0745"
+check_rxns <- c("r_0241")
 
-#little_mat <- matrix(stoisub[,colnames(stoisub) == check_rxns], ncol = length(check_rxns))
-#rownames(little_mat) <- rownames(stoisub)
-#cbind(little_mat[apply(little_mat != 0, 1, sum) != 0,], sapply(names(little_mat[apply(little_mat != 0, 1, sum) != 0,]), function(x){metSty$SpeciesName[metSty$SpeciesID == x]}))
+little_mat <- matrix(stoisub[,colnames(stoisub) == check_rxns], ncol = length(check_rxns))
+rownames(little_mat) <- rownames(stoisub)
+cbind(little_mat[apply(little_mat != 0, 1, sum) != 0,], sapply(names(little_mat[apply(little_mat != 0, 1, sum) != 0,]), function(x){metSty$SpeciesName[metSty$SpeciesID == x]}))
 
 #stoisub[apply(stoisub[,colnames(stoisub) %in% colnames(little_mat)] != 0, 1, sum) != 0, colnames(stoisub) %in% colnames(little_mat)]
 
@@ -487,19 +487,17 @@ for(rx in 1:length(stoisub[1,])){
 #eda.names(mel_graph)
 #eda(mel_graph, "weights")
 
-plotter = new.CytoscapeWindow("yeastie3", graph = mel_graph)
+plotter = new.CytoscapeWindow("yeastie4", graph = mel_graph)
 #specify node positioning
 #options(error = recover)
 #options(help.ports=2120)
 displayGraph(plotter)
 
 setNodePosition(plotter, rownames(met_pos)[!is.na(met_pos[,1])], met_pos$x[!is.na(met_pos[,1])], -1*met_pos$y[!is.na(met_pos[,1])])
-#setNodeColorDirect(plotter, rownames(met_pos)[!is.na(met_pos[,1])], rgb(0.6,0.2,0.3))
-#setNodeLabelColorDirect(obj, node.names, new.color)
-
 setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"),rxn_nodes[,1][!is.na(rxn_nodes[,1])], -1*rxn_nodes[,2][!is.na(rxn_nodes[,1])])
-setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,3])], "prod", sep = "_"),rxn_nodes[,3][!is.na(rxn_nodes[,3])], -1*rxn_nodes[,4][!is.na(rxn_nodes[,3])])	
-#hide all of the reaction nodese
+setNodePosition(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,3])], "prod", sep = "_"),rxn_nodes[,3][!is.na(rxn_nodes[,3])], -1*rxn_nodes[,4][!is.na(rxn_nodes[,3])])
+
+#hide all of the reaction nodes
 setNodeFillOpacityDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"), 0)
 setNodeFillOpacityDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "prod", sep = "_"), 0)
 setNodeBorderOpacityDirect(plotter, paste(rownames(rxn_nodes)[!is.na(rxn_nodes[,1])], "sub", sep = "_"), 0)
@@ -534,16 +532,132 @@ if(organism == "yeast"){
 		}
 	}
 
-	flux_vals
+	flux_mat <- flux_vals
+	col_num <- 2
+	edge_sf <- 0.1
+	library(colorRamps)
+	
+	flux_att <- color_by_flux(flux_vals, col_num, edge_sf)
+	edge_names <- sapply(c(1:length(flux_att[,1])), function(x){paste(flux_att[,colnames(flux_att) == "source"][x], flux_att[,colnames(flux_att) == "dest"][x], sep = "~")})
+	all_edges <- cy2.edge.names(mel_graph)
+	edge_names2 <- unname(unlist(sapply(edge_names, function(x){all_edges[names(all_edges) == x]})))
+	edge_names2 <- unname(unlist(sapply(edge_names, function(x){
+		if(x %in% names(all_edges)){
+			all_edges[names(all_edges) == x]
+			}else{
+				NA
+				}
+		})))
+	
+	valid_edge <- edge_names2 %in% all_edges
+	
+	noflux_edge <- !(names(all_edges) %in% edge_names)
+	noflux_edgename <- unname(all_edges[noflux_edge])
 	
 	
-	#comp_members <- rownames(stoisub)[stoisub[,colnames(stoisub) == "composition"] != 0]
-	#lapply(rownames(met_pos)[!is.na(met_pos[,1])], function(x){
-	#	setNodeColorDirect(plotter, x, ifelse(x %in% comp_members, rgb(0.9,0.4,0.2), rgb(0.2,0.4,0.8)))
-	#	})
+	
+	frac_match <- rep(NA, times = length(unique(flux_att[,colnames(flux_att) == "rxn"])))
+	for(i in 1:length(unique(flux_att[,colnames(flux_att) == "rxn"]))){
+		submatch <- flux_att[flux_att[,colnames(flux_att) == "rxn"] %in% unique(flux_att[,colnames(flux_att) == "rxn"])[i],]
+		if(is.vector(submatch) == TRUE){
+			sub_names  <- paste(submatch[names(submatch) == "source"], submatch[names(submatch) == "dest"], sep = "~")
+			}else{
+				sub_names <- sapply(c(1:length(submatch[,1])), function(x){paste(submatch[,colnames(submatch) == "source"][x], submatch[,colnames(submatch) == "dest"][x], sep = "~")})
+				}
+		frac_match[i] <- sum(sub_names %in% names(all_edges))/length(sub_names %in% names(all_edges))
+		}
+	
+	
+	flux_att_red <- flux_att[valid_edge,]
+	edge_names2_red <- edge_names2[valid_edge]
+	
+	for(edge in c(1:length(edge_names2_red))){	
+		setEdgeLineWidthDirect(plotter, edge_names2_red[edge], as.numeric(flux_att_red[,colnames(flux_att_red) == "width"][edge]))
+		setEdgeColorDirect(plotter, edge_names2_red[edge], flux_att_red[,colnames(flux_att_red) == "color"][edge])
+		}
+		
+		
+		
+	for(edge in c(1:length(noflux_edgename))){	
+		setEdgeLineWidthDirect(plotter, noflux_edgename[edge], edge_sf)
+		setEdgeColorDirect(plotter, noflux_edgename[edge], rgb(0,0,0))
+		}
+
+
+	
 	}
 
+redraw(plotter)
 
+#setEdge
+#grep(matchRE, cy2.edge.names(mel_graph))
+#grep(flux_att[1,1], cy2.edge.names(mel_graph))
+#grep(flux_att[2,1], cy2.edge.names(mel_graph))
+
+
+#setEdgeLineStyleDirect
+#setEdgeLineWidthDirect
+#setEdgeColorDirect
+
+
+
+rx <- 73
+
+color_by_flux <- function(flux_mat, col_num, edge_sf){
+		
+	nonzeroRx <- rownames(flux_mat)[flux_mat[,col_num] != 0]
+	rxnFlux <- flux_mat[flux_mat[,col_num] != 0,col_num]
+	
+	
+	medFlux <- summary(abs(rxnFlux))[names(summary(abs(rxnFlux))) == "Median"]
+	edgeWeight <- abs(rxnFlux)
+	edgeWidth <- sapply(edgeWeight/(10*medFlux), function(x){max(x, 1)})*edge_sf
+	edgeStyle <- rep("SOLID", times = length(edgeWidth))
+	
+	number.col = 1001
+	colorz <- blue2red(number.col)
+	col_index <- round(edgeWeight/(max(edgeWeight))*(number.col-1))+1
+	
+	dyn_pop_frame_total <- NULL	
+		
+	for(rx in 1:length(nonzeroRx)){
+		rxname <- nonzeroRx[rx]
+		rxn_stoi <- stoisub[stoisub[,colnames(stoisub) == rxname] != 0,colnames(stoisub) == rxname]
+		cofactor_change <- rxn_stoi[names(rxn_stoi) %in% cofactors]
+		if(length(cofactor_change) != 0){
+			cofactor_change <- cofactor_change[names(cofactor_change) %in% cofactor.rxns$cofactor[cofactor.rxns$cofactor %in% names(cofactor_change)][sapply(cofactor.list[cofactor.rxns$cofactor %in% names(cofactor_change)], function(x){!(rxname %in% x)})]]
+			}
+		
+		principal_change <-  rxn_stoi[!(names(rxn_stoi) %in% names(cofactor_change))]
+			 
+		if(sum(names(principal_change) %in% split.metab[,1]) != 0){
+			
+			meta_switch <- split.metab[split.metab$metabolite %in% names(principal_change),][sapply(rxn.list[split.metab$metabolite %in% names(principal_change)], function(x){rxname %in% x}),]
+		
+			for(i in 1:length(meta_switch[,1])){
+				names(principal_change)[names(principal_change) == meta_switch[i,1]] <- meta_switch$new_name[i]
+				}
+				}
+		
+		dyn_pop_frame <- NULL
+		if(length(principal_change[principal_change < 0]) > 0){
+			dyn_pop_frame <- rbind(dyn_pop_frame, cbind(nonzeroRx[rx], names(principal_change[principal_change < 0]), paste(rxname, "sub", sep = "_"), edgeWidth[rx]*abs(principal_change[principal_change < 0]), colorz[col_index][rx], edgeStyle[rx], ifelse(rxnFlux[rx] > 0, 1, 0)))
+			}
+		if(length(principal_change[principal_change > 0]) > 0){
+			dyn_pop_frame <- rbind(dyn_pop_frame, cbind(nonzeroRx[rx], paste(rxname, "prod", sep = "_"), names(principal_change[principal_change > 0]), edgeWidth[rx]*abs(principal_change[principal_change > 0]), colorz[col_index][rx], edgeStyle[rx], ifelse(rxnFlux[rx] > 0, 1, 0)))
+			}
+		dyn_pop_frame <- rbind(dyn_pop_frame, cbind(nonzeroRx[rx], paste(rxname, "sub", sep = "_"), paste(rxname, "prod", sep = "_"), edgeWidth[rx]*1, colorz[col_index][rx], edgeStyle[rx], ifelse(rxnFlux[rx] > 0, 1, 0)))
+		
+	
+		dyn_pop_frame_total <- rbind(dyn_pop_frame_total, dyn_pop_frame)
+	}
+	rownames(dyn_pop_frame_total) <- NULL
+	colnames(dyn_pop_frame_total) <- c("rxn", "source", "dest", "width", "color", "line_style", "flip")
+	dyn_pop_frame_total
+}			
+
+			
+		
 
 
 
