@@ -245,7 +245,9 @@ for (i in 1:length(enzyme_moles_per_second[1,])){
 	if(params$molar_absorptivity != "STD"){
 	params$molar_absorptivity <- as.numeric(params$molar_absorptivity)
 	
-	enzyme_moles_per_second[,i] <- ((((enzymeOD[,i]*params$assay_volume)/(params$molar_absorptivity*params$path_length))/params$OD_scaling)/params$fly_fraction)*params$Moles_of_absorbant*(ifelse(use.line == TRUE, line.enzyme$wts, pop.enzyme$wts))
+	#enzyme_moles_per_second[,i] <- ((((enzymeOD[,i]*params$assay_volume)/(params$molar_absorptivity*params$path_length))/params$OD_scaling)/params$fly_fraction)*params$Moles_of_absorbant*(ifelse(use.line == TRUE, line.enzyme$wts, pop.enzyme$wts))
+	
+	enzyme_moles_per_second[,i] <- ((((enzymeOD[,i]*params$assay_volume)/(params$molar_absorptivity*params$path_length))/params$OD_scaling)/params$fly_fraction)*params$Moles_of_absorbant
 	
 	}}
 
@@ -323,9 +325,16 @@ gas_exchange <- gas_exchange * SF
 }
 
 }else{
-	mcmc_list$Vcot <- mcmc_list$Vcot/1e7/22.4/3600*5*SF
-	mcmc_list$Vox  <- mcmc_list$Vox/1e7/22.4/3600*5*SF
+	#mcmc_list$Vcot <- mcmc_list$Vcot/1e7/22.4/3600*5*SF
+	#mcmc_list$Vox  <- mcmc_list$Vox/1e7/22.4/3600*5*SF
+	#gas-change per mg tissue
+	mcmc_list$Vcot <- (mcmc_list$Vcot/1e7/22.4/3600*5)/t(t(rep(1, times = n_mcmc_samples))) %*% t(line.enzyme$wts)*SF
+	mcmc_list$Vox  <- (mcmc_list$Vox/1e7/22.4/3600*5)/t(t(rep(1, times = n_mcmc_samples))) %*% t(line.enzyme$wts)*SF
+	
 	}
+
+
+
 
 
 
@@ -392,7 +401,12 @@ u = gas_exchange[line,c(1,2)]
 
 
 QP.optim <- lsei(A = t(A), B = t(u), E = S, F = f, G = G, H = h)
-calc.fluxes[,line] <- QP.optim$X
+if(QP.optim$IsError){
+	calc.fluxes[,line] <- QP.optim$X
+	}else{
+		calc.fluxes[,line] <- NA
+		}
+
 optim.resid[line] <- QP.optim$solutionNorm
 
 }
@@ -467,24 +481,45 @@ pc_corr[pc,] <- apply(gas_corr_samples, 2, function(x){cor(x, svd(pca_std, nu = 
 	}}; dev.off()
 
 
-#use procrusts rotation to align principal components
+#use procrustes rotation to align principal components
 library(shapes)
+library(reshape)
+library(ggplot2)
 #use median as the reference and rotate all individual mcmc v samples to align against this
 
-avgSVD <- svd(nonzero.flux, nu = n.components, nv = n.components)$v
+avgSVD <- svd(t(scale(t(nonzero.flux), center = TRUE, scale = TRUE)), nu = n.components, nv = n.components)$v
+colnames(avgSVD) <- paste("PC", c(1:n.components), sep = "")
 
-plot(avgSVD[,1] ~ avgSVD[,2], col = line.color, pch = 16, cex = 1.2)
+princ_compDF <- data.frame(sample = 0, avgSVD, pop = line.pop, size = 3, alpha = 1, stringsAsFactors = FALSE)
 
-svd(pca_std, nu = n.components, nv = n.components)
 
-for(mcmc_sample in 1:n_mcmc_samples){
-	flux_samples <- sapply(1:length(mcmc_list[[1]][,1]), function(x){FBA_list[[x]][,line]})	
-	median.calc.fluxes[,line] <- apply(flux_samples, 1, median)
+for(mcmc_sample in 1:100){
+	
+	sampleSVD <- svd(t(scale(t(FBA_list[[mcmc_sample]][apply(FBA_list[[mcmc_sample]] != 0, 1, sum) != 0,]), center = TRUE, scale = TRUE)), nu = n.components, nv = n.components)$v
+	
+	#rotate the sampleSVD to align against the median SVD
+	rotSVD <- sampleSVD %*% procOPA(avgSVD, sampleSVD, scale = FALSE, reflect = TRUE)$R
+	
+	#rotate the sampleSVD to align against the median SVD
+	#rotSVD <- procOPA(avgSVD, sampleSVD, scale = FALSE, reflect = TRUE)$Bhat
+	colnames(rotSVD) <- paste("PC", c(1:n.components), sep = "")
+	princ_compDF <- rbind(princ_compDF, data.frame(sample = mcmc_sample, rotSVD, pop = line.pop, size = 0.4, alpha = 0.3))
+	
 	}
 
+medianDF <- princ_compDF[princ_compDF$sample == 0,]
+princ_compDF <- princ_compDF[princ_compDF$sample != 0,]
 
+medianDF <- princ_compDF[princ_compDF$sample %in% 2,]
 
+princ_comp_plot <- ggplot(princ_compDF, aes(x = PC1, y = PC2, col = pop, size = size, alpha = alpha)) + scale_size_identity() + scale_alpha_identity()  + scale_x_continuous(limits = c(-0.2, 0.2)) + scale_y_continuous(limits = c(-0.2, 0.2))
+princ_comp_plot + geom_point()
 
+princ_comp_plot2 <- ggplot(medianDF, aes(x = PC1, y = PC2, col = pop, size = size, alpha = alpha)) + scale_size_identity() + scale_alpha_identity()
+princ_comp_plot2 + geom_point()
+
+princ_comp_plot2 <- ggplot(medianDF, aes(x = PC1, y = PC2, col = pop))
+princ_comp_plot2 + geom_point()
 
 
 
@@ -492,15 +527,38 @@ for(mcmc_sample in 1:n_mcmc_samples){
 
 od.measured.carried.flux <- matrix(NA, ncol = length(kinetic_reactions), nrow = length(kinetic_enzymes[,1]))
 
-for (rxn in 1:length(kinetic_reactions)){
+for(rxn in 1:length(kinetic_reactions)){
+	if(sum(rownames(calc.fluxes) %in% kinetic_reactions[rxn]) != 0){
 	od.measured.carried.flux[,rxn] <- calc.fluxes[rownames(calc.fluxes) %in% kinetic_reactions[rxn],]
-	}; colnames(od.measured.carried.flux) <- kinetic_reactions; rownames(od.measured.carried.flux) <- colnames(calc.fluxes)
+	}else{
+		od.measured.carried.flux[,rxn] <- 0
+		}
+	}	
+
+colnames(od.measured.carried.flux) <- kinetic_reactions; rownames(od.measured.carried.flux) <- colnames(calc.fluxes)
 
 kinetic_enzymes[kinetic_enzymes == 0] <- NA
 
 Vmax.fraction <- od.measured.carried.flux/kinetic_enzymes
-#measure correlations between these
-sapply(c(1:length(od.measured.carried.flux[1,])), function(x){cor(abs(od.measured.carried.flux[,x]), kinetic_enzymes[,x])})
+#measure correlations between carried flux and vmax
+corr_v_vmax <- sapply(c(1:length(od.measured.carried.flux[1,])), function(x){
+	if(sd(od.measured.carried.flux[,x]) != 0){
+		cor(abs(od.measured.carried.flux[,x]), kinetic_enzymes[,x], method = "spearman")
+		}else{
+			NA
+			}
+	})
+
+#measure correlations between vmax_frac and vmax
+corr_vfrac_vmax <- sapply(c(1:length(Vmax.fraction[1,])), function(x){
+	if(sd(Vmax.fraction[,x], na.rm = TRUE) != 0){
+		cor(abs(Vmax.fraction[,x])[!is.na(Vmax.fraction[,x])], kinetic_enzymes[,x][!is.na(Vmax.fraction[,x])], method = "spearman")
+		}else{
+			NA
+			}
+	})
+
+plot(corr_v_vmax ~ corr_vfrac_vmax)
 
 plot(od.measured.carried.flux[,x] ~  kinetic_enzymes[,x], pch = 16, col = line.color)
 
