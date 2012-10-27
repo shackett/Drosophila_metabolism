@@ -1,7 +1,3 @@
-#qsub -l 1day -cwd -sync n Rscript mel_FBA.R use.cluster=TRUE, use.line=TRUE, use.flight=FALSE, use.mcmc=TRUE
-
-args <- commandArgs()
-
 use.cluster = FALSE
 #if use.line == TRUE, then the point estimates of lines will be used. otherwise population estimates will be used
 use.line = TRUE
@@ -11,36 +7,17 @@ use.flight = FALSE
 #if use.mcmc == TRUE, then FBA will be done on all sample within a matrix
 use.mcmc = TRUE
 
-use.cluster = as.factor(unlist(strsplit(args[grep("use.cluster", args)], "="))[2])
-use.line = as.factor(unlist(strsplit(args[grep("use.line", args)], "="))[2])
-use.flight = as.factor(unlist(strsplit(args[grep("use.flight", args)], "="))[2])
-use.mcmc = as.factor(unlist(strsplit(args[grep("use.mcmc", args)], "="))[2])
 
-if(use.cluster == TRUE){
-	
-	setwd("/Genomics/grid/users/shackett/R/x86_64-unknown-linux-gnu-library/2.11")
-	library("limSolve")
-	#if(!("limSolve" %in% library()$results[,1])){
-	#	install.packages("limSolve", lib = "R", dependencies = TRUE)
-	#	}
-	
-	setwd("/Genomics/grid/users/shackett/Fruitflies")	
-	load("drosophila_stoi.R")
-	source("path_length_calc.R")
-	source("flimsy_plate_extract.R")	
-		
-	inst
-	}else{
-		setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
-		load("drosophila_stoi.R")
-		source("path_length_calc.R")
-		source("flimsy_plate_extract.R")
-		library(limSolve)
-		library(gplots)
-		library("colorRamps")
-		}
-		
+setwd("/Users/Sean/Desktop/Cornell/Drosophila_metabolism")
+load("drosophila_stoi.R")
+source("path_length_calc.R")
+#source("flimsy_plate_extract.R")
+library(limSolve)
+library(gplots)
+library(colorRamps)
+library(stringr)		
 
+n_mcmc_samples <- 10000
 
 ##### a few functions
 
@@ -55,7 +32,7 @@ apply(matrix(power.lm$coef, ncol = degree +1, nrow = length(velocity.vector), by
 
 
 	
-#using only a single sample
+### using only a single sample or initializing MCMC samples
 if(use.line == TRUE){
 line.enzyme <- read.table("MCMC_files/lnMat.tsv", sep = "\t", header = TRUE)
 line.flight <- read.table("MCMC_files/FLTlnMns.tsv", sep = "\t", header = TRUE)
@@ -66,8 +43,8 @@ line.enzyme <- line.enzyme[,-1]
 line.enzyme[line.enzyme < 0] <- 0
 
 if(use.flight == FALSE){
-line.resp <- read.table("MCMC_files/RESPlnMns.tsv", sep = "\t", header = TRUE)
-rownames(line.resp) <- as.character(line.resp$ln_nam)
+line.resp <- read.table("MCMC_files/RESPlineMns.tsv", sep = "\t", header = TRUE)
+rownames(line.resp) <- as.character(line.resp$line_nam)
 line.resp <- line.resp[,-1]	
 	}
 if(use.flight == TRUE){
@@ -75,7 +52,19 @@ flightM <- read.table("MCMC_files/FLTlnMns.tsv", sep = "\t", header = TRUE)
 line.flight <- data.frame(maxVel = flightM[,colnames(flightM) %in% "maxv"])
 rownames(line.flight) <- flightM$"ln_nam"
 	}
+
+### set the fluxes of crosses equal to the average of their component lines
+### need to correct differently for weight - get line weights from Tony
+F1crosses <- rownames(line.resp)[!(rownames(line.resp) %in% rownames(line.enzyme))]
+F1cross_comp <- t(sapply(F1crosses, function(lines){unlist(strsplit(lines, "_"))}))
+cross_kinetics <- t(sapply(c(1:length(F1cross_comp[,1])), function(cross){
+	apply(line.enzyme[rownames(line.enzyme) %in% F1cross_comp[cross,],], 2, mean)
+	}))
+rownames(cross_kinetics) <- F1crosses
+line.enzyme <- rbind(line.enzyme, cross_kinetics)
+
 }
+
 
 if(use.line == FALSE){
 
@@ -95,6 +84,7 @@ rownames(pop.flight) <- flightM$"pop_nam"
 	}
 }
 
+
 if(use.line == TRUE){
 	if(use.flight == FALSE){
 	valid.samples <- intersect(rownames(line.enzyme), rownames(line.resp))
@@ -109,25 +99,43 @@ if(use.line == TRUE){
 		
 	#relate lines to their population
 	populations <- c("N", "I", "B", "T", "Z")
+	crosspops <- c("NN", "BB")
 	line.pop <- rep(NA, times = length(valid.samples))
-	pop.color <- data.frame(pops = populations, color = c("RED", "ORANGE", "BLUE", "GREEN", "CYAN"), long.name = c("Netherlands", "Ithaca", "Beijing", "Tasmania", "Zimbabwee"))
+	pop.color <- data.frame(pops = c(populations, crosspops), color = c("RED", "ORANGE", "BLUE", "GREEN", "CYAN", "PURPLE", "YELLOW"), long.name = c("Netherlands", "Ithaca", "Beijing", "Tasmania", "Zimbabwee", "Netherlands-Intrapop", "Beijing-Intrapop"))
 	line.color <- rep(NA, times = length(valid.samples))
 	
 	for(pop in 1:length(populations)){
 		line.pop[grep(populations[pop], valid.samples)] <- populations[pop]
 		line.color[grep(populations[pop], valid.samples)] <- as.character(pop.color[pop,2])
 		}
-		}
+	for(pop in 1:length(crosspops)){
+		
+		pop_matches <- sapply(valid.samples, function(line){
+			
+			if(length(unique(unlist(strsplit(crosspops[pop], "")))) == 1){
+				#intrapop
+				length(unlist(str_match_all(line, unlist(strsplit(crosspops[pop], ""))[1]))) == 2
+				}else{
+					#interpop
+					length(unlist(str_match_all(line, unlist(strsplit(crosspops[pop], ""))[1]))) != 0 & length(unlist(str_match_all(line, unlist(strsplit(crosspops[pop], ""))[2]))) != 0
+					}
+			})
+				
+		line.pop[pop_matches] <- crosspops[pop]
+		line.color[pop_matches] <- as.character(pop.color[length(populations) + pop,2])
+		}	
+		
+	}
 		
 
 if(use.mcmc == TRUE){
 	
 	#using mcmc samples
 	
-	mcmc_files <- list.files("resp_MCMC")[grep(ifelse(use.flight, "FLT", "RESP"), list.files("resp_MCMC"))]
+	mcmc_files <- list.files("MCMC_files/RESP_res")[grep(ifelse(use.flight, "FLT", "RESP"), list.files("MCMC_files/RESP_res"))]
 	mcmc_matrix <- NULL
 	for(mcmc_file in mcmc_files){
-		source(paste("resp_MCMC/", mcmc_file, sep = ""))
+		source(paste("MCMC_files/RESP_res/", mcmc_file, sep = ""))
 		mcmc_matrix <- rbind(mcmc_matrix, get(ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())]))
 		rm(list = ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())])
 		}
@@ -138,8 +146,8 @@ if(use.mcmc == TRUE){
 		
 		if(use.line == TRUE){
 			
-			line.resp <- read.table("MCMC_files/RESPlnMns.tsv", sep = "\t", header = TRUE)
-			rownames(line.resp) <- as.character(line.resp$ln_nam)
+			line.resp <- read.table("MCMC_files/RESPlineMns.tsv", sep = "\t", header = TRUE)
+			rownames(line.resp) <- as.character(line.resp$line_nam)
 			line.resp <- line.resp[,-1]
 			
 			mcmc_list$Vcot = mcmc_matrix[,grep("mu.ln\\[Vcot,", colnames(mcmc_matrix))]
@@ -165,18 +173,25 @@ if(use.mcmc == TRUE){
 			
 			}
 	
-	if(use.line == TRUE){
-		
+	#if(use.line == TRUE){
 	#relate lines to their population
-	populations <- c("N", "I", "B", "T", "Z")
-	line.pop <- rep(NA, times = length(mcmc_list$Vcot[1,]))
-	pop.color <- data.frame(pops = populations, color = c("RED", "ORANGE", "BLUE", "GREEN", "CYAN"), long.name = c("Netherlands", "Ithaca", "Beijing", "Tasmania", "Zimbabwee"))
-	line.color <- rep(NA, times = length(mcmc_list$Vcot[1,]))
+	#populations <- c("N", "I", "B", "T", "Z", "NN", "BB")
+	#line.pop <- rep(NA, times = length(mcmc_list$Vcot[1,]))
+	#pop.color <- data.frame(pops = populations, color = c("RED", "ORANGE", "BLUE", "GREEN", "CYAN", "PURPLE", "YELLOW"), long.name = c("Netherlands", "Ithaca", "Beijing", "Tasmania", "Zimbabwee", "Netherlands-Intrapop", "Beijing-Intrapop"))
+	#line.color <- rep(NA, times = length(mcmc_list$Vcot[1,]))
 	
-	for(pop in 1:length(populations)){
-		line.pop[grep(populations[pop], colnames(mcmc_list$Vcot))] <- populations[pop]
-		line.color[grep(populations[pop], colnames(mcmc_list$Vcot))] <- as.character(pop.color[pop,2])
-		}}
+	#for(pop in 1:length(populations)){
+	#	if(length(unlist(strsplit(populations[pop], ""))) > 1){
+	#		pops <- unlist(strsplit(populations[pop], ""))
+	#		popexpr <- paste(pops[1], "[A-Z,_,0-9]+", pops[2], sep = "")  
+	#		line.pop[grep(popexpr, colnames(mcmc_list$Vcot))] <- populations[pop]
+	#		line.color[grep(popexpr, colnames(mcmc_list$Vcot))] <- as.character(pop.color[pop,2])
+	#		}else{
+	#		line.pop[grep(populations[pop], colnames(mcmc_list$Vcot))] <- populations[pop]
+	#		line.color[grep(populations[pop], colnames(mcmc_list$Vcot))] <- as.character(pop.color[pop,2])
+	#		}
+	#	}
+	#	}
 	
 	}
 
@@ -189,12 +204,13 @@ assay_parameters <- assay_parameters[,-1]
 assay_parameters <- cbind(assay_parameters, data.frame(path_length = NA))
 
 for(i in 1:length(assay_parameters[,1])){
-
-#If assay is visible then a different type of plate is used
-if(assay_parameters$molar_absorptivity[i] %in% c(16000, 19100, 11500)){
-	assay_parameters$path_length[i] <- flimsy_pl(assay_parameters$assay_volume[i]*1e6)
-	}else{
-assay_parameters$path_length[i] <- find.pl(assay_parameters$assay_volume[i], height_scale, bottom_d)$minimum * 100	}}
+	#If assay is visible then a different type of plate is used - determine the path-length in cm
+	if(assay_parameters$molar_absorptivity[i] %in% c(16000, 19100, 11500)){
+		assay_parameters$path_length[i] <- flimsy_pl(assay_parameters$assay_volume[i]*1e3)
+		}else{
+	assay_parameters$path_length[i] <- pl_optim(assay_parameters$assay_volume[i])$minimum * 100
+			}
+	}
 
 ####### Rxns corresponding to rows of G and stoichiometry are defined ############
 
@@ -406,9 +422,11 @@ rownames(median.calc.fluxes) <- colnames(S)
 colnames(median.calc.fluxes) <- rownames(kinetic_enzymes)
 
 for(line in 1:nsamples){
-	flux_samples <- sapply(1:100, function(x){FBA_list[[x]][,line]})	
+	flux_samples <- sapply(1:n_mcmc_samples, function(x){FBA_list[[x]][,line]})	
 	median.calc.fluxes[,line] <- apply(flux_samples, 1, median)
 	}
+
+
 
 
 valid.sample <- rep(TRUE, times = length(colnames(median.calc.fluxes)))
@@ -419,6 +437,9 @@ if(use.line == TRUE){pdf(file = "line_flux.pdf")}else{pdf(file = "pop_flux.pdf")
 
 if(use.line == TRUE){
 heatmap.2((nonzero.flux[,valid.sample] - apply(nonzero.flux[,valid.sample], 1, mean))/apply(nonzero.flux[,valid.sample], 1, sd), trace = "none", col = blue2yellow(100), ColSideColors = line.color[valid.sample], cexCol = 0.4, cexRow = 0.05 + 0.8/log10(length(nonzero.flux[,1])))
+
+heatmap.2((nonzero.flux[,valid.sample])/apply(nonzero.flux[,valid.sample], 1, sd), trace = "none", col = blue2yellow(100), ColSideColors = line.color[valid.sample], cexCol = 0.4, cexRow = 0.05 + 0.8/log10(length(nonzero.flux[,1])))
+
 	}else{
 heatmap.2((nonzero.flux - apply(nonzero.flux, 1, mean))/apply(nonzero.flux, 1, sd), trace = "none", col = blue2yellow(100), cexRow = 0.05 + 0.8/log10(length(nonzero.flux[,1])))
 	}
@@ -444,6 +465,26 @@ legend("topleft", legend = pop.color[,3], text.col = as.character(pop.color[,2])
 pc_corr[pc,] <- apply(gas_corr_samples, 2, function(x){cor(x, svd(pca_std, nu = n.components, nv = n.components)$v[,pc])})
 
 	}}; dev.off()
+
+
+#use procrusts rotation to align principal components
+library(shapes)
+#use median as the reference and rotate all individual mcmc v samples to align against this
+
+avgSVD <- svd(nonzero.flux, nu = n.components, nv = n.components)$v
+
+plot(avgSVD[,1] ~ avgSVD[,2], col = line.color, pch = 16, cex = 1.2)
+
+svd(pca_std, nu = n.components, nv = n.components)
+
+for(mcmc_sample in 1:n_mcmc_samples){
+	flux_samples <- sapply(1:length(mcmc_list[[1]][,1]), function(x){FBA_list[[x]][,line]})	
+	median.calc.fluxes[,line] <- apply(flux_samples, 1, median)
+	}
+
+
+
+
 
 
 
