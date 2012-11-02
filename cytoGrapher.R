@@ -5,7 +5,7 @@ library("RCytoscape")
 library(gplots)
 library(combinat)
 
-organism = "yeast"
+organism = "mel"
 max.add.new <- 2000
 
 if(organism == "mel"){

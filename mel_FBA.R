@@ -325,8 +325,7 @@ gas_exchange <- gas_exchange * SF
 }
 
 }else{
-	#mcmc_list$Vcot <- mcmc_list$Vcot/1e7/22.4/3600*5*SF
-	#mcmc_list$Vox  <- mcmc_list$Vox/1e7/22.4/3600*5*SF
+	gas_exchange = (line.resp[,c(1:2)]/1e7/22.4/3600)*5*SF
 	#gas-change per mg tissue
 	mcmc_list$Vcot <- (mcmc_list$Vcot/1e7/22.4/3600*5)/t(t(rep(1, times = n_mcmc_samples))) %*% t(line.enzyme$wts)*SF
 	mcmc_list$Vox  <- (mcmc_list$Vox/1e7/22.4/3600*5)/t(t(rep(1, times = n_mcmc_samples))) %*% t(line.enzyme$wts)*SF
@@ -336,7 +335,7 @@ gas_exchange <- gas_exchange * SF
 
 
 
-
+nsamples <- length(kinetic_enzymes[,1])
 
 if(use.flight == FALSE){
 
@@ -347,11 +346,10 @@ if(use.line == TRUE){
 if(ifelse(use.line == TRUE, !("line_resp_fba_fluxes.Rdata" %in% list.files()), !("pop_resp_fba_fluxes.Rdata" %in% list.files()))){
 
 FBA_list = list()
-for(mcmc_step in 1:length(mcmc_list[[1]][,1])){
+for(mcmc_step in 1:n_mcmc_samples){
 
 #sample matricies: kinetic_enzymes & gas_exchange
 #iterate through all samples
-nsamples <- length(kinetic_enzymes[,1])
 
 calc.fluxes <- matrix(NA, nrow = length(S[1,]), ncol = nsamples)
 rownames(calc.fluxes) <- colnames(S)
@@ -401,7 +399,7 @@ u = gas_exchange[line,c(1,2)]
 
 
 QP.optim <- lsei(A = t(A), B = t(u), E = S, F = f, G = G, H = h)
-if(QP.optim$IsError){
+if(QP.optim$solutionNorm < 0.01){
 	calc.fluxes[,line] <- QP.optim$X
 	}else{
 		calc.fluxes[,line] <- NA
@@ -437,7 +435,7 @@ colnames(median.calc.fluxes) <- rownames(kinetic_enzymes)
 
 for(line in 1:nsamples){
 	flux_samples <- sapply(1:n_mcmc_samples, function(x){FBA_list[[x]][,line]})	
-	median.calc.fluxes[,line] <- apply(flux_samples, 1, median)
+	median.calc.fluxes[,line] <- apply(flux_samples, 1, median, na.rm = TRUE)
 	}
 
 
@@ -457,10 +455,9 @@ heatmap.2((nonzero.flux[,valid.sample])/apply(nonzero.flux[,valid.sample], 1, sd
 	}else{
 heatmap.2((nonzero.flux - apply(nonzero.flux, 1, mean))/apply(nonzero.flux, 1, sd), trace = "none", col = blue2yellow(100), cexRow = 0.05 + 0.8/log10(length(nonzero.flux[,1])))
 	}
-
             
 n.components <- 2                
-zero.flux <- colnames(S)[apply(calc.fluxes == 0, 1, sum) == length(calc.fluxes[1,])]
+#zero.flux <- colnames(S)[!nonzero.flux]
 pc_corr <- data.frame(cotcorr = rep(NA, times = n.components), Otcorr = rep(NA, times = n.components), RQcorr = rep(NA, times = n.components))
 
 if(use.line == TRUE){
@@ -468,7 +465,7 @@ if(use.line == TRUE){
 pca_std <- nonzero.flux; pca_std <- t(scale(t(pca_std), center = TRUE, scale = TRUE))
 gas_corr_samples <- gas_exchange[sapply(colnames(pca_std), function(x){c(1:length(gas_exchange[,1]))[rownames(gas_exchange) == x]}),]
 gas_corr_samples <- cbind(gas_corr_samples, RQ = gas_corr_samples$Vcot/gas_corr_samples$Vox)
-
+ 
 plot(((svd(pca_std, nu = 1, nv = 1)$d^2/sum(svd(pca_std, nu = 2, nv = 2)$d^2))), main = "Variance explained by each PC", ylab = "proportion of variance explained by PC")
 
 for (pc in 1:n.components){
@@ -478,7 +475,7 @@ legend("topleft", legend = pop.color[,3], text.col = as.character(pop.color[,2])
 
 pc_corr[pc,] <- apply(gas_corr_samples, 2, function(x){cor(x, svd(pca_std, nu = n.components, nv = n.components)$v[,pc])})
 
-	}}; dev.off()
+	}}
 
 
 #use procrustes rotation to align principal components
@@ -488,38 +485,43 @@ library(ggplot2)
 #use median as the reference and rotate all individual mcmc v samples to align against this
 
 avgSVD <- svd(t(scale(t(nonzero.flux), center = TRUE, scale = TRUE)), nu = n.components, nv = n.components)$v
-colnames(avgSVD) <- paste("PC", c(1:n.components), sep = "")
+medPCloadings <- svd(t(scale(t(nonzero.flux), center = TRUE, scale = TRUE)), nu = n.components, nv = n.components)$u
+colnames(medPCloadings) <- colnames(avgSVD) <- paste("PC", c(1:n.components), sep = "")
+rownames(medPCloadings) <- rownames(nonzero.flux)
 
 princ_compDF <- data.frame(sample = 0, avgSVD, pop = line.pop, size = 3, alpha = 1, stringsAsFactors = FALSE)
 
-
-for(mcmc_sample in 1:100){
+for(mcmc_sample in 1:1000){
 	
-	sampleSVD <- svd(t(scale(t(FBA_list[[mcmc_sample]][apply(FBA_list[[mcmc_sample]] != 0, 1, sum) != 0,]), center = TRUE, scale = TRUE)), nu = n.components, nv = n.components)$v
+	submat <- FBA_list[[mcmc_sample]][apply(FBA_list[[mcmc_sample]] != 0, 1, sum, na.rm = TRUE) != 0, apply(is.na(FBA_list[[mcmc_sample]]), 2, sum) == 0]
+	
+	sampleSVD <- svd(t(scale(t(submat), center = TRUE, scale = TRUE)), nu = n.components, nv = n.components)$v
 	
 	#rotate the sampleSVD to align against the median SVD
-	rotSVD <- sampleSVD %*% procOPA(avgSVD, sampleSVD, scale = FALSE, reflect = TRUE)$R
+	rotSVD <- sampleSVD %*% procOPA(avgSVD[apply(is.na(FBA_list[[mcmc_sample]]), 2, sum) == 0,], sampleSVD, scale = FALSE, reflect = TRUE)$R
 	
 	#rotate the sampleSVD to align against the median SVD
 	#rotSVD <- procOPA(avgSVD, sampleSVD, scale = FALSE, reflect = TRUE)$Bhat
 	colnames(rotSVD) <- paste("PC", c(1:n.components), sep = "")
-	princ_compDF <- rbind(princ_compDF, data.frame(sample = mcmc_sample, rotSVD, pop = line.pop, size = 0.4, alpha = 0.3))
+	princ_compDF <- rbind(princ_compDF, data.frame(sample = mcmc_sample, rotSVD, pop = line.pop[apply(is.na(FBA_list[[mcmc_sample]]), 2, sum) == 0], size = 1, alpha = 0.08))
 	
 	}
 
-medianDF <- princ_compDF[princ_compDF$sample == 0,]
-princ_compDF <- princ_compDF[princ_compDF$sample != 0,]
+medianDF <- cbind(princ_compDF[princ_compDF$sample == 0,], shape = 21, fill = princ_compDF[princ_compDF$sample == 0,]$pop)
+medianDF$pop <- NA 
+princ_compDF <- cbind(princ_compDF[princ_compDF$sample != 0,], shape = 21, fill = princ_compDF[princ_compDF$sample != 0,]$pop)
+princ_compDF <- rbind(princ_compDF, medianDF)
 
-medianDF <- princ_compDF[princ_compDF$sample %in% 2,]
+#medianDF <- princ_compDF[princ_compDF$sample %in% 2,]
 
-princ_comp_plot <- ggplot(princ_compDF, aes(x = PC1, y = PC2, col = pop, size = size, alpha = alpha)) + scale_size_identity() + scale_alpha_identity()  + scale_x_continuous(limits = c(-0.2, 0.2)) + scale_y_continuous(limits = c(-0.2, 0.2))
+
+princ_comp_plot <- ggplot(princ_compDF, aes(x = PC1, y = PC2, fill = factor(fill), colour = factor(pop), size = size, alpha = alpha, shape = shape)) + scale_size_identity() + scale_alpha_identity()  + scale_x_continuous(limits = c(-0.3, 0.35)) + scale_y_continuous(limits = c(-0.35, 0.3)) + scale_shape_identity() + scale_color_brewer(palette = "Set2", na.value = "BLACK") + scale_fill_brewer(palette = "Set2", guide = 'none') + guides(colour = guide_legend(title = "Population")) 
 princ_comp_plot + geom_point()
+dev.off()
 
-princ_comp_plot2 <- ggplot(medianDF, aes(x = PC1, y = PC2, col = pop, size = size, alpha = alpha)) + scale_size_identity() + scale_alpha_identity()
-princ_comp_plot2 + geom_point()
 
-princ_comp_plot2 <- ggplot(medianDF, aes(x = PC1, y = PC2, col = pop))
-princ_comp_plot2 + geom_point()
+
+
 
 
 
@@ -528,14 +530,14 @@ princ_comp_plot2 + geom_point()
 od.measured.carried.flux <- matrix(NA, ncol = length(kinetic_reactions), nrow = length(kinetic_enzymes[,1]))
 
 for(rxn in 1:length(kinetic_reactions)){
-	if(sum(rownames(calc.fluxes) %in% kinetic_reactions[rxn]) != 0){
-	od.measured.carried.flux[,rxn] <- calc.fluxes[rownames(calc.fluxes) %in% kinetic_reactions[rxn],]
+	if(sum(rownames(median.calc.fluxes) %in% kinetic_reactions[rxn]) != 0){
+	od.measured.carried.flux[,rxn] <- median.calc.fluxes[rownames(median.calc.fluxes) %in% kinetic_reactions[rxn],]
 	}else{
 		od.measured.carried.flux[,rxn] <- 0
 		}
 	}	
 
-colnames(od.measured.carried.flux) <- kinetic_reactions; rownames(od.measured.carried.flux) <- colnames(calc.fluxes)
+colnames(od.measured.carried.flux) <- kinetic_reactions; rownames(od.measured.carried.flux) <- colnames(median.calc.fluxes)
 
 kinetic_enzymes[kinetic_enzymes == 0] <- NA
 
@@ -568,10 +570,10 @@ vmax.frac.mat <- vmax.frac.mat[rownames(vmax.frac.mat) != "N13",]
 #heatmap.2(vmax.frac.mat, trace = "n")
 
 if(use.line == TRUE){
-	write.table(calc.fluxes, file = "line_fluxes.tsv", sep = "\t")
+	write.table(median.calc.fluxes, file = "line_fluxes.tsv", sep = "\t")
 	write.table(Vmax.fraction, file = "line_vmax_fraction.tsv", sep = "\t")
 	} else {
-		write.table(calc.fluxes, file = "pop_fluxes.tsv", sep = "\t")
+		write.table(median.calc.fluxes, file = "pop_fluxes.tsv", sep = "\t")
 		write.table(Vmax.fraction, file = "pop_vmax_fraction.tsv", sep = "\t")
 		}
 		
