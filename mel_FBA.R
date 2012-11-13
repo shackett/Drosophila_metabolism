@@ -43,8 +43,8 @@ line.enzyme <- line.enzyme[,-1]
 line.enzyme[line.enzyme < 0] <- 0
 
 if(use.flight == FALSE){
-line.resp <- read.table("MCMC_files/RESPlineMns.tsv", sep = "\t", header = TRUE)
-rownames(line.resp) <- as.character(line.resp$line_nam)
+line.resp <- read.table("MCMC_files/RESPlnMns.tsv", sep = "\t", header = TRUE)
+rownames(line.resp) <- as.character(line.resp$ln_nam)
 line.resp <- line.resp[,-1]	
 	}
 if(use.flight == TRUE){
@@ -55,33 +55,14 @@ rownames(line.flight) <- flightM$"ln_nam"
 
 ### set the fluxes of crosses equal to the average of their component lines
 ### need to correct differently for weight - get line weights from Tony
-F1crosses <- rownames(line.resp)[!(rownames(line.resp) %in% rownames(line.enzyme))]
-F1cross_comp <- t(sapply(F1crosses, function(lines){unlist(strsplit(lines, "_"))}))
-cross_kinetics <- t(sapply(c(1:length(F1cross_comp[,1])), function(cross){
-	apply(line.enzyme[rownames(line.enzyme) %in% F1cross_comp[cross,],], 2, mean)
-	}))
-rownames(cross_kinetics) <- F1crosses
-line.enzyme <- rbind(line.enzyme, cross_kinetics)
+#F1crosses <- rownames(line.resp)[!(rownames(line.resp) %in% rownames(line.enzyme))]
+#F1cross_comp <- t(sapply(F1crosses, function(lines){unlist(strsplit(lines, "_"))}))
+#cross_kinetics <- t(sapply(c(1:length(F1cross_comp[,1])), function(cross){
+#	apply(line.enzyme[rownames(line.enzyme) %in% F1cross_comp[cross,],], 2, mean)
+#	}))
+#rownames(cross_kinetics) <- F1crosses
+#line.enzyme <- rbind(line.enzyme, cross_kinetics)
 
-}
-
-
-if(use.line == FALSE){
-
-pop.enzyme <- read.table("MCMC_files/popMat.tsv", sep = "\t", header = TRUE)
-rownames(pop.enzyme) <- as.character(pop.enzyme$pop_nam)
-pop.enzyme <- pop.enzyme[,-1]
-
-if(use.flight == FALSE){
-pop.resp <- read.table("MCMC_files/RESPpopMns.tsv", sep = "\t", header = TRUE)
-rownames(pop.resp) <- as.character(pop.resp$pop_nam)
-pop.resp <- pop.resp[,-1]
-	}
-if(use.flight == TRUE){
-flightM <- read.table("MCMC_files/FLTpopMns.tsv", sep = "\t", header = TRUE)
-pop.flight <- data.frame(maxVel = flightM[,colnames(flightM) %in% "maxv"])
-rownames(pop.flight) <- flightM$"pop_nam"
-	}
 }
 
 
@@ -109,7 +90,6 @@ if(use.line == TRUE){
 		line.color[grep(populations[pop], valid.samples)] <- as.character(pop.color[pop,2])
 		}
 	for(pop in 1:length(crosspops)){
-		
 		pop_matches <- sapply(valid.samples, function(line){
 			
 			if(length(unique(unlist(strsplit(crosspops[pop], "")))) == 1){
@@ -132,10 +112,10 @@ if(use.mcmc == TRUE){
 	
 	#using mcmc samples
 	
-	mcmc_files <- list.files("MCMC_files/RESP_res")[grep(ifelse(use.flight, "FLT", "RESP"), list.files("MCMC_files/RESP_res"))]
+	mcmc_files <- list.files("MCMC_files/MCMC_inbred")[grep(ifelse(use.flight, "FLT", "RESP"), list.files("MCMC_files/MCMC_inbred"))]
 	mcmc_matrix <- NULL
 	for(mcmc_file in mcmc_files){
-		source(paste("MCMC_files/RESP_res/", mcmc_file, sep = ""))
+		source(paste("MCMC_files/MCMC_inbred/", mcmc_file, sep = ""))
 		mcmc_matrix <- rbind(mcmc_matrix, get(ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())]))
 		rm(list = ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())])
 		}
@@ -144,55 +124,20 @@ if(use.mcmc == TRUE){
 	
 	if(use.flight == FALSE){
 		
-		if(use.line == TRUE){
-			
-			line.resp <- read.table("MCMC_files/RESPlineMns.tsv", sep = "\t", header = TRUE)
-			rownames(line.resp) <- as.character(line.resp$line_nam)
+			line.resp <- read.table("MCMC_files/RESPlnMns.tsv", sep = "\t", header = TRUE)
+			rownames(line.resp) <- as.character(line.resp$ln_nam)
 			line.resp <- line.resp[,-1]
 			
 			mcmc_list$Vcot = mcmc_matrix[,grep("mu.ln\\[Vcot,", colnames(mcmc_matrix))]
 			mcmc_list$Vox = mcmc_matrix[,grep("mu.ln\\[Vox,", colnames(mcmc_matrix))]
 			colnames(mcmc_list$Vcot) <- rownames(line.resp); colnames(mcmc_list$Vox) <- rownames(line.resp)
-			
-			}else{
-				
-				pop.enzyme <- read.table("MCMC_files/popMat.tsv", sep = "\t", header = TRUE)
-				rownames(pop.enzyme) <- as.character(pop.enzyme$pop_nam)
-				pop.enzyme <- pop.enzyme[,-1]
-
-				mcmc_list$Vcot = mcmc_matrix[,grep("mu.pop\\[Vcot,", colnames(mcmc_matrix))]
-				mcmc_list$Vox = mcmc_matrix[,grep("mu.pop\\[Vox,", colnames(mcmc_matrix))]
-				colnames(mcmc_list$Vcot) <- rownames(pop.enzyme); colnames(mcmc_list$Vox) <- rownames(pop.enzyme)
-				
-				}
 		
 		}else{
 			
 			#FINISH ME
 			
-			
 			}
-	
-	#if(use.line == TRUE){
-	#relate lines to their population
-	#populations <- c("N", "I", "B", "T", "Z", "NN", "BB")
-	#line.pop <- rep(NA, times = length(mcmc_list$Vcot[1,]))
-	#pop.color <- data.frame(pops = populations, color = c("RED", "ORANGE", "BLUE", "GREEN", "CYAN", "PURPLE", "YELLOW"), long.name = c("Netherlands", "Ithaca", "Beijing", "Tasmania", "Zimbabwee", "Netherlands-Intrapop", "Beijing-Intrapop"))
-	#line.color <- rep(NA, times = length(mcmc_list$Vcot[1,]))
-	
-	#for(pop in 1:length(populations)){
-	#	if(length(unlist(strsplit(populations[pop], ""))) > 1){
-	#		pops <- unlist(strsplit(populations[pop], ""))
-	#		popexpr <- paste(pops[1], "[A-Z,_,0-9]+", pops[2], sep = "")  
-	#		line.pop[grep(popexpr, colnames(mcmc_list$Vcot))] <- populations[pop]
-	#		line.color[grep(popexpr, colnames(mcmc_list$Vcot))] <- as.character(pop.color[pop,2])
-	#		}else{
-	#		line.pop[grep(populations[pop], colnames(mcmc_list$Vcot))] <- populations[pop]
-	#		line.color[grep(populations[pop], colnames(mcmc_list$Vcot))] <- as.character(pop.color[pop,2])
-	#		}
-	#	}
-	#	}
-	
+		
 	}
 
 
@@ -244,8 +189,6 @@ for (i in 1:length(enzyme_moles_per_second[1,])){
 	
 	if(params$molar_absorptivity != "STD"){
 	params$molar_absorptivity <- as.numeric(params$molar_absorptivity)
-	
-	#enzyme_moles_per_second[,i] <- ((((enzymeOD[,i]*params$assay_volume)/(params$molar_absorptivity*params$path_length))/params$OD_scaling)/params$fly_fraction)*params$Moles_of_absorbant*(ifelse(use.line == TRUE, line.enzyme$wts, pop.enzyme$wts))
 	
 	enzyme_moles_per_second[,i] <- ((((enzymeOD[,i]*params$assay_volume)/(params$molar_absorptivity*params$path_length))/params$OD_scaling)/params$fly_fraction)*params$Moles_of_absorbant
 	
@@ -442,7 +385,6 @@ for(line in 1:nsamples){
 
 
 valid.sample <- rep(TRUE, times = length(colnames(median.calc.fluxes)))
-#valid.sample <- !(colnames(median.calc.fluxes) %in% "N13")
 nonzero.flux <- median.calc.fluxes[apply(median.calc.fluxes[,valid.sample] == 0, 1, sum) != length(median.calc.fluxes[1, valid.sample]),]
 
 if(use.line == TRUE){pdf(file = "line_flux.pdf")}else{pdf(file = "pop_flux.pdf")}
@@ -456,7 +398,7 @@ heatmap.2((nonzero.flux[,valid.sample])/apply(nonzero.flux[,valid.sample], 1, sd
 heatmap.2((nonzero.flux - apply(nonzero.flux, 1, mean))/apply(nonzero.flux, 1, sd), trace = "none", col = blue2yellow(100), cexRow = 0.05 + 0.8/log10(length(nonzero.flux[,1])))
 	}
             
-n.components <- 2                
+n.components <- 12                
 #zero.flux <- colnames(S)[!nonzero.flux]
 pc_corr <- data.frame(cotcorr = rep(NA, times = n.components), Otcorr = rep(NA, times = n.components), RQcorr = rep(NA, times = n.components))
 
