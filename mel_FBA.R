@@ -211,7 +211,6 @@ vel.pow.corr <- data.frame(advance.ratio = c(0, 0.13, 0.27, 0.40, 0.53), velocit
 
 #Tran and Unden 1998
 #46.5kJ/mole
-
 #for melanogaster, 0.85 velocity, advance ratio 0.32, gives us the scaling between advance ratio and velocity
 
 #scale virilis velocity = f(advance ratio) to melanogaster
@@ -232,13 +231,8 @@ fit.velocity <- velocity.to.power(velocities, power.lm)
 if(use.flight == TRUE){
 pdf(file = "flight_vel.pdf")
 plot(fit.velocity ~ velocities, type = "l", ylab = "Power (W)")
-if(use.line == TRUE){
-power.mech <- (velocity.to.power(as.numeric(unlist(line.flight)), power.lm)/0.1)*(line.enzyme$wts*10^-6/5)
-points(velocity.to.power(as.numeric(unlist(line.flight)), power.lm) ~ unlist(line.flight), pch = 8, col = "RED")
-	}else{
-	power.mech <- (velocity.to.power(as.numeric(unlist(pop.flight)), power.lm)/0.1)*(pop.enzyme$wts*10^-6/5)
-	points(velocity.to.power(as.numeric(unlist(pop.flight)), power.lm) ~ unlist(pop.flight), pch = 8, col = "RED")
-		}
+power.mech <- (velocity.to.power(as.numeric(unlist(line.flight$maxv)), power.lm)/0.1)*(line.enzyme$wts*10^-6/5)
+points(velocity.to.power(as.numeric(unlist(line.flight$maxv)), power.lm) ~ unlist(line.flight$maxv), pch = 8, col = "RED")
 dev.off()
 
 #46500 J per mole ATP (and making the flux for 5 flies again)
@@ -487,11 +481,43 @@ Vmax.fraction <- od.measured.carried.flux/kinetic_enzymes
 #measure correlations between carried flux and vmax
 corr_v_vmax <- sapply(c(1:length(od.measured.carried.flux[1,])), function(x){
 	if(sd(od.measured.carried.flux[,x]) != 0){
-		cor(abs(od.measured.carried.flux[,x]), kinetic_enzymes[,x], method = "spearman")
-		}else{
-			NA
+		corval <- signif(cor(abs(od.measured.carried.flux[,x]), kinetic_enzymes[,x], method = "spearman"), 3)
+		pcorval <- signif(cor(abs(od.measured.carried.flux[,x]), kinetic_enzymes[,x], method = "pearson"), 3)
+    r_square <- signif(cor(abs(od.measured.carried.flux[,x]), kinetic_enzymes[,x], method = "pearson")^2, 3)
+    print(plot(abs(od.measured.carried.flux[,x]) ~ kinetic_enzymes[,x], main = paste(colnames(od.measured.carried.flux)[x], "s", corval, "p2", r_square, sep = ": ")))
+    c(corval, pcorval, r_square)
+    }else{
+			c(NA, NA, NA)
 			}
 	})
+
+flux_corrTab <- cbind(t(corr_v_vmax), abs(apply(Vmax.fraction, 2, function(x){median(x[x != 0],na.rm = TRUE)})))
+flux_corrTab[apply(od.measured.carried.flux == 0, 2, sum) != 0,c(1:3)] <- NA
+flux_corrTab <- cbind(c("Alcohol Dehydrogenase", "Malic Enzyme", "Malate Dehydrogenase (cytosolic)", "Fatty Acid Synthase", "Phosphoglucose Isomerase", "Phosphofructokinase", "Glucose 6-Phosphate Dehydrogenase", "6-Phosphogluconate Dehydrogenase", "Phosphoglucomutase", "Glycogen Phosphorylase", "Glycogen Synthase", "Trehalase", "Glucokinase", "Glycerol 3-Phosphate Dehydrogenase (cytosolic)", "Glycerol 3-Phosphate Dehydrogenase (mitochondrial)", "Pyruvate Dehydrogenase", "Fumarase", "Malate Dehydrogenase (mitochondrial)", "Succinate Dehydrogenase"), flux_corrTab)
+colnames(flux_corrTab) <- c("Enzyme", "Spearman", "Pearson", "rSquared", "vmaxFrac")
+flux_corrTab <- as.data.frame(flux_corrTab, stringsAsFactors = FALSE)
+flux_corrTab[,-1] <- apply(flux_corrTab[,-1], c(1,2), as.numeric)
+flux_corrTab <- flux_corrTab[!is.na(flux_corrTab[,5]),]
+
+
+library(xtable)
+rownames(flux_corrTab) <- NULL
+xtable(flux_corrTab, display = c("s", "s", "g", "g", "g", "g"))
+print(xtable(flux_corrTab, display = c("s", "s", "g", "g", "g", "g"), digits = 3), include.rownames = FALSE)
+
+
+#spearman correlations between Vmax and V
+#PDH: 0.21, vmax frac = 0.0157, r2 = 0.0568
+#G3P shuttle (GPO): 0.27, vmax frac = 0.117, r2 = 0.109
+#G3P dehydorgenase (GPDH): 0.56, vmax frac = 0.00409, r2 = 0.322
+#PFK: 0.23, vmax frac  = 0.0437, r2 = 0.055
+#FUM: s: -0.141, r2 = 0.024, vmax frac = 0.0219
+library(xtable)
+flux_corrTab <- data.frame(Enzyme = c("PDH", "GPO", "GPDH", "PFK", "FUM"), spearCorr = c(0.21, 0.27, 0.558, 0.231, -0.141), r_squared = c(0.0568, 0.109, 0.322, 0.055, 0.024), "vmaxfrac" = c(0.0157, 0.117, 0.00409, 0.0437, 0.0219)) 
+
+
+
+
 
 #measure correlations between vmax_frac and vmax
 corr_vfrac_vmax <- sapply(c(1:length(Vmax.fraction[1,])), function(x){
@@ -520,22 +546,46 @@ if(use.line == TRUE){
 		}
 		
 
+#save PCs
 
 
 
 
+library(gplots)
+n_colors = 1001
+PCgrad_colors <- colorpanel(n_colors, "blue1", "antiquewhite", "gold1")
+#plot(1:n_colors,1:n_colors, col = PCgrad_colors)
+  
+PCflux <- data.frame(reaction = names(medPCloadings[,1]), dirflux = medPCloadings[,1], invflux = medPCloadings[,1]*-1, stringsAsFactors = FALSE)
+
+PCflux$dirColor = PCgrad_colors[round((PCflux[,2] + max(abs(PCflux[,2])))/(2*max(abs(PCflux[,2]))) * (n_colors/(n_colors+1))*n_colors) + 1]
+PCflux$invColor = PCgrad_colors[round((PCflux[,3] + max(abs(PCflux[,3])))/(2*max(abs(PCflux[,3]))) * (n_colors/(n_colors+1))*n_colors) + 1]
+
+PC_colormap <- list()
+PC_colormap[[1]] <- PCflux
+image(z=matrix(1:n_colors, ncol=1), x = seq(-1*max(abs(PCflux[,2])), max(abs(PCflux[,2])), by = 2*max(abs(PCflux[,2]))/(n_colors*(n_colors/(n_colors+1)))), col=PCgrad_colors, yaxt="n", xlab = "")
 
 
 
+PCflux <- data.frame(reaction = names(medPCloadings[,2]), dirflux = medPCloadings[,2], invflux = medPCloadings[,2]*-1, stringsAsFactors = FALSE)
+
+PCflux$dirColor = PCgrad_colors[round((PCflux[,2] + max(abs(PCflux[,2])))/(2*max(abs(PCflux[,2]))) * (n_colors/(n_colors+1))*n_colors) + 1]
+PCflux$invColor = PCgrad_colors[round((PCflux[,3] + max(abs(PCflux[,3])))/(2*max(abs(PCflux[,3]))) * (n_colors/(n_colors+1))*n_colors) + 1]
+
+PC_colormap[[2]] <- PCflux
+image(z=matrix(1:n_colors, ncol=1), x = seq(-1*max(abs(PCflux[,2])), max(abs(PCflux[,2])), by = 2*max(abs(PCflux[,2]))/(n_colors*(n_colors/(n_colors+1)))), col=PCgrad_colors, yaxt="n", xlab = "")
 
 
+PCflux <- data.frame(reaction = names(medPCloadings[,3]), dirflux = medPCloadings[,3], invflux = medPCloadings[,3]*-1, stringsAsFactors = FALSE)
+
+PCflux$dirColor = PCgrad_colors[round((PCflux[,2] + max(abs(PCflux[,2])))/(2*max(abs(PCflux[,2]))) * (n_colors/(n_colors+1))*n_colors) + 1]
+PCflux$invColor = PCgrad_colors[round((PCflux[,3] + max(abs(PCflux[,3])))/(2*max(abs(PCflux[,3]))) * (n_colors/(n_colors+1))*n_colors) + 1]
+
+PC_colormap[[3]] <- PCflux
+image(z=matrix(1:n_colors, ncol=1), x = seq(-1*max(abs(PCflux[,2])), max(abs(PCflux[,2])), by = 2*max(abs(PCflux[,2]))/(n_colors*(n_colors/(n_colors+1)))), col=PCgrad_colors, yaxt="n", xlab = "")
 
 
-
-
-
-
-
+save(PC_colormap, file = "PC_loadingsColors.Rdata")
 
 
 

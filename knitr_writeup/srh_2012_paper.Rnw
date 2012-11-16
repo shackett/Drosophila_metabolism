@@ -1,0 +1,408 @@
+\documentclass[12pt]{article}\usepackage{graphicx, color}
+\usepackage{alltt}
+\usepackage[left=0.6in,top=0.6in,right=0.6in,bottom=0.6in,nohead]{geometry}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{a4paper}                   % ... or a4paper or a5paper or ... 
+\usepackage{wrapfig}	%in-line figures
+\usepackage{natbib}		%bibliography
+\usepackage{pslatex} 	%for times new roman
+\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{color}
+\usepackage{multirow}
+
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\Sexpr{opts_chunk$set(tidy=TRUE, message=FALSE)}
+<<echo=FALSE,results='hide'>>=
+options(width=80)
+library(knitr)
+opts_knit$set(progress = TRUE, verbose = TRUE)
+opts_chunk$set(echo = TRUE)
+@
+
+\author{Sean R. Hackett, Anthony J. Greenberg, Drew S. Fister, Lawrence G. Harshman, Andrew G. Clark}
+\title{Quantitative genetics \& metabolic basis of variability in \textit{D. melanogaster} flight and respiration} 
+%\title{Functional variation and modeling of \textit{D. melanogaster} metabolic phenotypes} 
+\date{}
+
+
+
+\begin{document}
+
+\setlength{\parskip}{0.5mm}
+\linespread{1.5}
+
+\thispagestyle{empty}
+\pagestyle{empty}
+
+\maketitle
+
+\section*{Abstract}
+
+The well defined pathways dealing with the catabolism of stored nutrients in order to produce flight power in \textit{D. melanogaster} provides a system whereby variation in metabolic phenotypes can be associated with the resulting production of energy and its biomechanical utilization.  By analyzing metabolic variation in inbred lines utilizing a quantitative genetics framework, the magnitude of genetic and environmental portions of phenotypic variance in these traits can be determined.  These associations between natural variation can then be used to explain physiological variation and gross-behavior.  The traits of interest for this study were the catalytic activity of 19 metabolic enzymes, quantities of five metabolites, resting respiration rate and free-flight profiles.  Phenotypic variation is determined for each trait individually, as well as through an analysis of covariation with other traits in order to investigate the physiological interconnectivity of these traits.
+
+\section*{Introduction}
+
+The physiological, molecular and mechanical and basis of $\textit{Drosophila}$ flight, respiration and metabolism have been laboriously determined over the last century, but the systems-wide relationships between variability of these traits remain poorly understood.  Studies to address this question have largely focused on relating variability in flight metrics as an indicator energy production, with metabolic phenotypes that are necessary for the production of this energy \cite{Laurie-Ahlberg1985, Suarez1996, Montooth2003}.  While genetic variants contributing to variability in these traits have been found, quantitative variability in traits responsible for energy production have been difficult to relate to traits requiring extreme levels of energy production.  
+
+By surveying population variability in flight and associating this variability with quantitative variability in resting metabolic rate (O$_{2}$ consumption) and other metabolic traits, we expand upon previously demonstrated pairwise connections between metabolic and flight phenotypes.  These pairwise correlations are combined to show how traits relying upon metabolic flux are affected by the cumulative effect of variability in the measured subset of metabolic traits.  This work additionally establishes a quantitative genetics framework for studying the genetic basis of these traits, and represents another step towards describing the physiological impact of metabolic heterogeneity.  
+
+\subsection*{Flight physiology}
+
+\textit{Drosophila} flight is a complex phenomena both in terms of the extreme energy requirements necessary to sustain flight, as well as the complexity of the biomechanical conversion of energy into power.  The physiological challenge provided by this act is attested by insect flight muscle having the highest mass-specific metabolic activity of any known tissue\citep{Sacktorbook}.  This energy is primarily provided by the breakdown of glycogen, trehalose and hexoses \cite{Chadwick1947, Sacktor1966, Wigglesworth1949} through a flight-associated acceleration of glycolysis \cite{Gilmour1961, Sacktor1966}.  Proline catabolism also has a role, particularly during the initiation of flight \cite{Sacktor1967}.  High glycolytic flux fuels the mitochondria with pyruvate, where the Kreb cycle and ATP-synthesis proceed aerobically because of the efficient air delivering tracheloar system \cite{Harrison2000} and abundant mitochondria\cite{Lindstedt1998}.  During flight, rapid metabolism results in a 100-fold increase in oxygen consumption over resting state in flight muscle \cite{Sacktor1966}.  This generates large quantities of ATP that can be used to fulfill the extreme energetic requirements of the flight muscle.  
+	 
+Resting \textit{Drosophila} physiology differs in its intricacy from flight physiology, in that while flight physiology deals with the maximal potential power a fly can generate by chaining metabolite reserves, enzyme activities and biomechanical efficiency; resting physiology is complicated by differential flux through branching pathways, in ways that can vary environmentally \cite{Heinstra1991} or genetically \cite{Labate1992}.  This complexity can be partially represented by looking at the activity of enzymes that are involved in shunting metabolites through various pathways and associating this variation with accumulation of metabolites or production of energy as determined by respirometry.
+
+While associating flight with its energetic determinants, an optimal approach would be to compare in-flight metabolism and gas-exchange with flight phenotypes.  Because of difficulties in sustaining the flight of a large number of \textit{Drosophila} for respirometry or enzyme kinetic experiments, measurements on cohorts of resting flies were taken.  In this setting, associations with flight will be found only to the extent that variation across resting metabolic states can be treated as proxy for variability in flight metabolism.  This studies association of a sizable fraction of the variance of flight metrics based upon variability in metabolic traits suggests that this postulate is at least partially true.
+
+\subsection*{Gas exchange}
+	
+During the catabolism of pure carbohydrates, each three-carbon pyruvate entering the Kreb cycle will lose a CO$_2$ molecule during the Pyruvate dehydrogenase, isocitrate dehydrogenase and $\alpha$-ketoglutarate dehydrogenase reactions.  As a result of the Kreb cycle, three molecules of O$_2$ will be reduced by cytochrome c oxidase during the electron-transport chain.  By contrast, the catabolism of fatty acids, via $\beta$-oxidation and the Kreb cycle will emit two CO$_2$ and consume three molecules of $O_2$.  This will result in an expected respiratory quotient, or ratio of CO$_2$ produced to O$_2$ consumed, of 1.0 for carbohydrate metabolism and 0.66 for fat breakdown.  
+
+During lipid anabolism, the conversion of pyruvate into acetyl CoA, will result in no net-production of CO$_2$ as the decarboxylation reaction catalyzed by pyruvate dehydrognenase is balanced by the ATP-driven carboxylation reaction of pyruvate carboxylase necessary to sustainably produce oxaloacetate.  These molecules of pyruvate and oxaloacetate will combine to form citrate and after being translocated across the mitochondrial membrane, will be broken down by citrate lyase to reverse the previous reaction.  These acetyl CoA molecules will then be consumed during the course of fatty acid synthesis in reactions that require two NADPH molecules per polymerization reaction.  The production of these NADPH molecules occurs during the course of the pentose phosphate pathway and pyruvate-malate cycle, resulting in the production of two molecules of CO$_2$.  Under these conditions, two six-carbon glucose molecules would be expected to produce 3 two-carbon acetyl groups, with six carbons released as CO$_2$ during the production of NADPH \cite{MetaGlance}. 
+
+An early report of values of respiratory quotients from \textit{D. virilis} and \textit{D. americana} found values of $>$1.0 prior to flight, 1.0 during flight and $<$1.0 after flight\cite{Chadwick1947}.  While a study of recombinant inbred lines found RQs of 1.0 for fed \textit{drosophila} and a decrease to 0.95 after three hours of starvation\cite{VanVoorhies2004}.  The sole utilization of carbohydrates for flight is consistent with an RQ of 1.0, while deviation from this during resting respiration is indicative of anabolism or catabolism of lipids or proteins.
+
+%ATP production from O2 consumption
+
+Gaseous oxygen is consumed when it is reduced by cytochrome c oxidase to translocate protons during the electron transport chain.  Because this occurs during a sequential process that results in the translocation of either 10 protons and the production of 2.5 ATP if the initial electron donator is NADH or 6 protons/1.5 ATP if the initial electron donor is FADH$_{2}$ for each O$_{2}$ consumed, there is an association between oxygen consumption and ATP production, although it cannot be interpreted as a direct proxy.  The production of ATP during substrate-level phosphorylation and unaccounted variability in the utilization of anaerobic metabolism across our samples provides another level of nonlinearity in the connection between ATP and O$_{2}$ consumption.  Still the association between oxygen consumption and ATP production can be supported by the observation that during hovering flight, mechanical power output has been demonstrated to be a sensitive indicator of oxygen consumption\cite{Laurie-Ahlberg1985}.
+
+\subsection*{Natural variability in flight, gas-exchange and metabolism}
+%Relationship between enzymes and energy production:
+
+Metabolism ultimately produces energy for flight in the form of ATP, resulting in gas-exchange in the process.  While the details of this have been extensively described, the source of variability in flight is less apparent.  Because the energy for flight is generated through collective flux through glycolysis and the TCA cycle, studies have attempted to describe the extent to which variability in energy production and flight are dependent upon the activity levels of specific enzymes.  It has been shown that in order to reach the high glycolytic flux needed to support flight, some glycolytic enzymes \textit{in vivo} activities approach the ideal maximum activity \cite{Suarez1996}, while other enzymes require excess activity to drive a forward reaction \cite{Suarez2000}.  Additionally, moderate to severe reductions in the activities of most enzymes where necessary to significantly perturb the frequency of wing beats \cite{Eanes2006}.  This is in agreement with the predictions of metabolic control theory, whereby the flux through a pathway is not directly dependent upon a single enzyme, but rather spread among enzymes in a pathway in a manner reflecting the abundance of metabolites and activity of enzymes \cite{Kacser1995}.  Natural variability in many of these enzymes has previously been demonstrated\cite{Laurie-Ahlberg1980, Laurie-Ahlberg1982}, but because of these findings, variation of a single enzyme would not be expected to produce large changes in the energy production.  Still several studies have found associations between natural variants in G3PD and PGI and flight phenotypes in \textit{Drosophila} and \textit{Colias} butterflies respectively\cite{Watt1983, Clark1983, Barnes1986}. 
+
+%degree of natural variation in our traits, quantitative genetic analysis	
+	
+Past studies have found molecular and/or genetic variation in the traits that we analyzed.  Natural occurring variation has been found in many metabolic enzymes \cite{Laurie-Ahlberg1980, Laurie-Ahlberg1982}, with significant trans-QTL loci found to affect glycogen synthetase, hexokinase, phosphoglucomutase and trehalase \cite{Montooth2003}.  Montooth et al. 2003 found that metabolic rate, as measured by CO$_2$ production varied across 4.9 phenotypic standard deviations, with genetic variation explaining 40\% of the phenotypic variance, with variation partially explained by one QTL.  This study also found considerable variability in flight traits, with free-flight mean velocity varying over 4.25 phenotypic standard deviations and takeoff angle variability over 4.8 phenotypic standard deviations.  Two significant QTLs were found for each of flight velocity and metabolic rate \cite{Montooth2003}.  Additional QTLs have been associated with wing-beat frequency and duration \cite{Luckinbill2005}.  
+
+\section*{Results}
+
+To better understand the amount of genetic and environmental variation affecting variation in flight and rate of gas exchange in $\emph{D. melanogaster}$, a panel of 17-19 inbred lines from each of five populations were chosen for further investigation.  Expanding upon the life-history and metabolic traits \cite{Greenberg2011} that have previously been assayed in these line, respiration and flight phenotypes were determined.  The relationship between lines, populations and traits were modeled in a multivariate fashion using a previously described hierarchical bayesian model \cite{Greenberg2010, Greenberg2011}, allowing the variability in a trait, the phenotypic variance, to be decomposed into the mean and variance of lines nested within populations.  
+
+\subsection*{Respiration measurement}
+
+%Respirometry Traits and reason for measurement
+The rate of oxygen consumption as a measure of the production of ATP, as well as the rate of carbon dioxide production, an indicator of catabolic reactions during intermediate metabolism were measured in six replicates across two blocks for each line.  While many previous studies have assumed a constant respiratory quotient (ratio of CO$_{2}$  to O$_{2}$), and thus used CO$_{2}$ as a proxy for O$_{2}$ \cite{VanVoorhies2004, Khazaeli2005}, we additionally sought to determine if there was genetic variability in this trait.  Variability in these three traits are suspected to reflect the overall energy production of a line, as well as broad trends in metabolite utilization.
+  
+%Respirometry Methodology
+The method for determining the volumes corresponding to CO$_2$ peaks and O$_2$ valleys utilized in this study was to isolate cohorts of five flies in 3mL of air of known composition, incubate for half hour, then inject this sample into continuously flowing air leading to a carbon dioxide and oxygen analyzer.  Looking across the measurement interval, peaks in the carbon dioxide analyzer output and valleys in the oxygen analyzer output indicate the volume of gas consumed or produced during the incubation.  To quantify this volume, peak were conservatively removed, a polynomial baseline was fitted and then peaks were identified via HMM and integrated to determine volume.  This calculation method is useful because the fit of a polynomial baseline over the entire sample interval allows integration relative to the expected value of background during a peak, rather than relative to a background point at a user-defined timepoint.  HMM identification of peaks also removes biases in assigning peak-background penumbrae.  Visual inspection of the fit of the polynomial baseline to the background points and the identification of HMM-located peaks confirmed the success of peak calling.
+
+%Incubation time - hypercapnia / hypoxia, Circadian effects, Day effects
+To minimize the effects of incubation time on CO$_2$ and O$_2$ rates of production and RQ, we attempted to standardize the incubation time to 30 minutes.  Variation around this value occurred due to imprecision and delays (mean, sd) and allowed calculation of the effect of incubation time on VCO$_2$, VO$_2$ and RQ.  This value was found to be significant (lm: p $<$ 4.18e$^{-7}$), but the small slope and absence of systematic incubation time differences between lines, suggests no practical difficulties in disregarding this factor across the narrowly varying incubation times.
+
+To minimize the possible influence of circadian effects, all measurements occurred between noon and 9pm relative to a 12-hour on, 12-hour off light cycle set to turn on and off at 10am and 10pm respectively.  Each line was measured in two blocks, at different times of the day, and the measurements of a population were dispersed evenly across the measurement intervals during the six days when measurements were performed.  Looking at the relationship between the incubation start time and the CO$_2$ and O$_2$ rates of production and RQ across all samples, revealed no significant association between incubation start time and gas change.
+
+Day effects were minimized by measuring the same number of lines from each population each day, while a different subset of lines was measured each day.  Across the six days when the vast majority of samples were measured, there were no significant differences in CO$_2$ and O$_2$ rates of production.  
+
+Collectively, the absence of appreciable incubation, circadian and day effects, indicates that the results of the respirometry experiments should be free of systematic experimental differences between lines and populations.  ****Nevertheless, day effects were still included in the Bayesian hierarchical model****.
+
+\subsection*{Variability in gas-exchange phenotypes}
+
+\begin{figure}[h!]
+\includegraphics[scale = 0.5]{line_specVar.pdf}
+\caption{Line-specific gas-exchange rates and flight-performance.  Lines are ordered by the posterior median of a population and within each population by the posterior median of lines. Posterior medians and confidence intervals are shown for both lines and populations.}
+\end{figure}
+
+As can be seen from Table \ref{tab:cvr}, there is a large amount of variation in CO$_{2}$ production across lines, but the largest component of variation is experimental variation between different groups of flies.  When looking at O$_{2}$ consumption this gap is extended, with a larger amount of between-replicate variability resulting in a decreased heritability for the trait.  This higher between-replicate variability is likely a function of the higher imprecision of O$_{2}$ measurement than CO$_{2}$.  When looking at the ratio of these values (the respiratory quotient) the heritability is higher, likely because much of the experimental variability that effects O$_{2}$ and CO$_{2}$ affects both of them similarly, so their ratio is more repeatable.
+
+Despite the considerable replicate variance of respiratory metrics, the genetic variability across lines and populations of \textit{Drosophila} is substantial (Figure \ref{respplots}). Variability in CO$_2$ consumption is observed both across all lines assayed, and within-each population assayed.  Posterior medians vary over a X1.5-foldX range from XXX to XXX.  Production of carbon dioxide does not vary significantly between populations owing to the extensive variation in CO$_2$ within each population.  Carbon dioxide production varies substantially within the five populations assayed, with totally nonoverlapping confidence intervals between the lines with the highest and lowest CO$_2$ production in each population.  Posterior medians for the populations assayed vary continuously over a XXX range.  Variability in O$_2$ consumption is observed across all of the assayed lines.  Posterior medians vary over a X1.5-foldX range from XXX to XXX.  Consumption of oxygen varies significantly in a population specific manner with non-overlapping confidence interval for the Beijing median, XXX:XXX and Netherlands/Tasmania, XXX:XXX and XXX:XXX.  The posterior medians of O$_2$ consumption vary similarly to CO$_2$ consumption but owing to decreased precision of O$_{2}$ consumption quantification and the consequential higher variance between replicates, confidence intervals are wider.  Variation in respiratory quotient is observed across all lines assayed, owing primarily to the significant variation in RQ observed within the Beijing lines.  Posterior medians for non-Beijing population reside near 0.95, while the posterior median of Beijing lines is XXX; with median estimates extending from X0.85-1.25X.
+
+\subsection*{Flight measurement}
+
+%Flight Traits and reason for measurement
+%Association between respirometry associated energy production and utilization in flight
+Because of its importance for fitness and extreme metabolic requirements, flight represents an excellent tool for investigating whether metabolic heterogeneity affects overall energy production and has resulting effects on fitness.  The presence of genetic variation underlying total velocity and takeoff angle has been previously demonstrated \cite{Montooth2003}.  In addition to these previously used metrics, upward velocity, tangential acceleration along the path of flight, orthogonal centripetal acceleration and angular acceleration were calculated.  A study by Marden showed that selection for increased upwind flying ability resulted in selected flies with a higher mean velocity and lower takeoff angle than the parental population.  Interestingly the increased flight velocity was not accomplished by selected lines having a higher maximum velocity, but rather by having a higher propensity towards reaching an invariant peak velocity.  Because of the large number of lines in this study having a large enough sample of flies to make this same comparison would not be possible, but the same effect should be captured by comparing the average value of velocity with the maximum value across a takeoff trajectory.  This analysis of the mean, maximum and mean divided by maximum for a trait was extended to upwards velocity and all three measured acceleration traits.  These metrics should collectively characterize the extreme energy requirements necessary for flight, lift, cornering ability and capacity to reach peak performance.
+
+%Flight Methodology
+For each monotonically ascending flight trajectory, a polynomial was fitted to minimize errors due to experimental imprecision and allow for calculation of values at non-observed time points.  Manual inspection of the cropped coordinates of the first three hundred trajectories as well as the fastest and slowest hundred trajectories confirmed the successful capture and polynomial fit of all trajectories.  
+
+%Directional bias, day effect, circadian effect
+In order to minimize circadian effects, all flies were assayed between noon and 9pm relative to a 12-hour on, 12-hour off light cycle set to turn on and off at 10am and 10pm respectively.  Because of large differences in the propensity to fly between different lines of flies and the grand scale of this experiment, optimally balanced experimental designs where a constant number of flights were collected on multiple days were not possible.  For every line, data was collected on multiple days, but the number of days required to capture a minimum number of flights and the number of flights collected varied.  Day effects were calculated but are more sensitive to "catch-up" days when a smaller number of possibly weaker fly lines were being analyzed.
+
+%Directional bias was incorporated into the model but wasn't correlated with any other flight traits so it was disregarded.
+
+A bias in takeoff direction could indicate some sort of tactic stimulation which could influence takeoff behavior possibly imparting different characteristics on it then unstimulated flight.  To determine if this effect was important, the the angle along the x-y horizontal plane was determined for each flight.  This metric was roughly uniformly distributed, providing no evidence for directional preference.  
+
+%Time of maximal velocity - jump versus continuous acceleration
+
+Looking at the time at which the tangential acceleration is maximized over the flight interval (Figure \ref{tmax}) indicates that most flights have the highest tangential acceleration either immediately at or near takeoff or at the termination of tracking.  Past work has shown that initial takeoff in $\textit{Drosophila}$ occurs through jumping \cite{Zumstein2004}.  The high tangential acceleration near takeoff is likely because of the influence of jumping over the first few frames.  This rapid acceleration would allow an initially rapid approach towards steady velocity.  Additionally, the high number of trajectories with maximal tangential acceleration at the termination of tracking indicates that many flies have not yet reached their peak velocity over the course of the takeoff trajectory (mean 237ms).  This is confirmed by 38$\%$ of flights having the highest mean velocity in the last 10\% of the recorded flight.
+
+\subsection*{Variability in flight phenotypes}
+
+%Quantitative genetic parameters
+From table \ref{tab:cvr} it can be seen that the largest heritabilities of any of flight traits were for the six velocity traits measured.  While these traits are correlated either because they are partially confounded by definition or through mutual covariation with another governing trait, such as rate of ATP synthesis, they also convey unique information.  For velocity and mean velocity this variability can be seen as the same sort that was observed in the Marden selection experiments.  But while these experiments didn't see a selective response for maximum velocity, their is clearly variability across lines in this trait as well.  The upwards velocity measures have this same or greater level of heritability than total velocity traits, interestingly this heritability is considerably greater than for the takeoff angle.  For these seven traits, there are significant differences across lines in each trait, as well as within each population (Figure \ref{flightplots}a:g).  There are suggestive differences between the populations in some of these metrics, but within populations is still far greater than variability between populations.  
+
+Compared to the considerable variability of velocity traits, the heritabilities for the mean and maximum values of the acceleration traits are minute.  This minimal genetic variability is mirrored in a lack of variability between lines (Figure \ref{flightplots}h:m).  This inappreciable heritability, represent a difficulty in dealing with data where the variance is the same magnitude as the mean.  Applying an ANOVA to the raw metrics indicates that there is interline variability in these traits, despite the minimal heritability estimated from our hierarchical bayesian modeling.  Still, the ratio of these poorly modeled metrics, mmac = accC/maxac, mmat = accT/maxat, mmaa = accA/mmaa, vary considerably between lines and have heritabilities from 0.240 - 0.264.  
+
+
+
+\begin{table}[h!]
+\caption{Coefficients of variation and broad-sense heritability of physiological variables.}\vspace{2mm}
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+variable& replicate CVR&line CVR&$H^{2}$\\\midrule
+Vcot&0.160 (0.143, 0.179)&0.077 (0.065, 0.093)&0.190 (0.133, 0.263)\\
+Vox&0.224 (0.200, 0.252)&0.066 (0.054, 0.081)&0.080 (0.052, 0.120)\\
+Rq&0.137 (0.124, 0.152)&0.096 (0.081, 0.116)&0.331 (0.258, 0.419)\\\addlinespace
+vel&0.155 (0.142, 0.168)&0.196 (0.167, 0.231)&0.616 (0.535, 0.695)\\
+accT&0.140 (0.113, 0.173)&0.080 (0.065, 0.100)&0.246 (0.159, 0.365)\\
+accC&0.225 (0.200, 0.253)&0.039 (0.032, 0.048)&0.029 (0.018, 0.047)\\
+accA&0.226 (0.199, 0.254)&0.014 (0.012, 0.018)&0.004 (0.003, 0.006)\\
+Vz&0.133 (0.104, 0.169)&0.399 (0.325, 0.505)&0.900 (0.845, 0.939)\\
+TOangle&0.283 (0.265, 0.304)&0.116 (0.099, 0.139)&0.144 (0.108, 0.193)\\
+maxv&0.218 (0.203, 0.234)&0.157 (0.135, 0.186)&0.343 (0.276, 0.422)\\
+maxVz&0.267 (0.247, 0.289)&0.204 (0.173, 0.243)&0.369 (0.297, 0.450)\\
+maxat&0.498 (0.464, 0.537)&0.013 (0.011, 0.016)&0.001 (0.000, 0.001)\\
+maxac&0.515 (0.476, 0.558)&0.011 (0.009, 0.014)&0.000 (0.000, 0.001)\\
+maxaa&0.511 (0.473, 0.552)&0.003 (0.003, 0.004)&0.000 (0.000, 0.000)\\
+mmv&0.108 (0.103, 0.114)&0.080 (0.068, 0.096)&0.355 (0.283, 0.443)\\
+mmVz&0.142 (0.134, 0.150)&0.097 (0.083, 0.116)&0.322 (0.255, 0.403)\\
+mmac&0.276 (0.257, 0.297)&0.155 (0.131, 0.186)&0.240 (0.184, 0.312)\\
+mmat&0.289 (0.269, 0.312)&0.173 (0.146, 0.207)&0.264 (0.204, 0.337)\\
+mmaa&0.294 (0.273, 0.317)&0.174 (0.148, 0.207)&0.259 (0.201, 0.329)\\\bottomrule
+\end{tabular}
+\end{center}
+\label{tab:cvr}
+\end{table}
+
+
+
+\section*{Discussion}
+
+% correlations between traits
+
+Across the lines of $\textit{D melanogaster}$ studied, there is considerable variation in almost all of the traits examined.  When correlating the genetic variability in flight and gas-exchange phenotypes with these traits and additional metabolic and life-history traits, 35 correlations where the absolute value was greater than 0.1 were identified (Figure \ref{corr}a).  18 total correlations between these phenotypes, with a magnitude of greater than 0.2, were similarly identified (Figure \ref{corr}b).  These thresholds were chosen because they yielded associations of a potentially interesting magnitude although additional correlations were significant after permutation analysis.  
+
+One striking feature of the set of partial and total correlations is the dense connectivity of the flight correlations.  The large number of total correlations suggests that these traits are functionally related, where a high value of one flight trait suggests higher values of other metrics.  These relationships are likely due to a hidden determinant such as the overall health of a line, it's capacity for energy generation or efficiency of biomechanical utilization.  The large number of partial correlations between flight traits similarly reflects some common features shared by pairs of metrics but also may be due to differences in flight strategies across lines.  Differences in flight strategies are known to exist and be associated with fecundity and other aspects of fitness\cite{Watt1983, Dudleybook}.
+
+Several of these correlations are between traits that are expressible as a combination of two other traits, namely the respiratory quotient, and mean/max of flight traits and angular acceleration.  To the extent that these traits are redundant with respect to their constituent traits, the total correlations of these traits should be large.  This is clearly not the case for the respiratory quotient, because the correlation between RQ and both VCO$_{2}$ and VO$_{2}$ is minimal.  For the $\frac{mean}{max}$ velocity and acceleration traits, there are significant correlations between $_{mm}$V$_{z}$ and V$_{z}$, as well as between $_{mm}$V and V$_{tot}$, but the presence of other partial correlations for each of these metrics, confirms their solitary importance.  The relationship between angular acceleration and both velocity and centripetal acceleration is similarly confounded resulting in covariation of $_{mm}$a$_{c}$ and $_{mm}$a$_{a}$ in the partial correlations and a$_{cmax}$ and a$_{amax}$ in the total correlations.  
+
+There are clear physiological associations between metabolism, its consequential gas-exchange and the extreme amounts of energy necessary to initiate and sustain \textit{Drosophila} flight.  The presence of nine partial correlations over 0.1 between flight traits and either gas-exchange or metabolic traits indicates that there are pairwise relationships of large effect between these pairs of phenotypes, but because energy production for flight is largely a systems level property of the metabolic network, a measure of the proportion of the total flight variability explained by variability in all enzymes and gas-exchange traits (Table \ref{tab:ss}) might be more relevant comparison.  This measure was determined as the sum of squared partial correlations of flight traits across all enzyme activity, metabolite and gas-exchange traits.  This indicates that the metabolic dependence of flight metrics varies widely, with most traits having between 3 and 9\% of their variance explained by the assayed metabolic traits, with the exception of some of the poorly modeled acceleration traits noted previously.  Interestingly, the top sensitivity was observed for the takeoff angle, mean divided by maximum tangential acceleration and for mean over max total and upward velocity.  This suggests that the most energetically taxing aspects of flight or at least those requiring extreme enzymatic activities are ascent and sustained peak performance, rather than just fast speeds or acceleration.
+
+Variation in enzyme activities are responsible for differences in pathway utilization and/or flux.  Looking at the activities of enzymes and abundance of metabolites, there are a total of eleven partial correlations of over 0.1 and these are spread among six enzymes or metabolites.  The three enzymes with two or more interactions were glucose 6-phosphate dehydrogenase (G6PD), hexokinase (HEX) and malic enzyme (ME).  These enzymes are interesting in that they are all branch-point enzymes, with G6PD and HEX being two of the four enzymatic connections to glucose-6-phosphate.  The large effects of branch-point enzymes on power generation or gas-exchange suggests that they have a relatively large impact on physiology by promoting differences in pathway utilization.  For example, a high level of G6PD activity implies a higher rate of pentose phosphate pathway flux.  This is negatively correlated with flight traits because of the decreased glycolytic flux associated with increased pentose phosphate flux.  G6PD activity is also associated with increased CO$_{2}$ production and RQ values, despite the fact that CO$_{2}$ is produced by the pentose phosphate shunt.  This could be because large amounts of carbon dioxide production are more associated with excessive physical activity than conversion of excess metabolites to fat.
+
+%Gas exchange 
+While there are several population differences in the respiration and flight traits that we chose to study, the population variability in the respiratory quotient is novel and particularly interesting.  The distribution of RQs within the Beijing population is similar to the distribution in the other four populations except the medians are considerably shifted XXX.  One possible reason for this pattern is that the young 5-7 day old Beijing flies are in an anabolic state, specifically generating fat and in the process emitting CO$_{2}$ with an absence of O$_{2}$ consumption by the temporal decoupling of this storage.
+
+
+
+
+%\begin{figure}[h!]
+%\centering
+%\includegraphics[scale = 0.8]{Correlations.pdf}
+%\caption{Partial correlations within respirometry and flight traits and to enzymatic and life-history traits}
+%\end{figure}
+
+\begin{figure}[p]
+\includegraphics[scale = 0.8]{Correlations.pdf}
+\caption{a) Partial correlations of over 0.1 between gas-exchange, flight, metabolic and life-history traits.  Respirometry traits: VCO$_{2}$, VO$_{2}$, RQ; Flight traits: TOangle, for a$_{t}$, a$_{c}$, a$_{a}$, V$_{tot}$, V$_{z}$, max indicates the maximum value of a flight and mm indicates the mean divided by max for a trait; Enzyme kinetics traits: 19 enzymes; Life history traits: fecundity, viability, weight, developmental rate; metabolites: only those with correlations shown - Glycogen. b) Correlations of over 0.2 between gas-exchange, flight, metabolic and life-history traits. Metabolic, respirometry and life history traits with no correlations over 0.2 are not shown}
+\vspace{-30mm}
+\includegraphics[]{Correlations_total.pdf}
+\label{corr}
+\end{figure}
+
+
+\clearpage
+
+\subsubsection*{Modeling of Metabolic Flux}
+
+Flux balance analysis (cite) was used to predict fluxes through central carbon metabolism in each line, using line-specific rates of gas-exchange and each enzyme's V$_{max}$.  XXXX Previous usage of FBA in drosophila XXXXX.  
+
+Using each of 10,000 posterior samples of CO$_{2}$ production and O$_{2}$ consumption rates, fluxes through 87 reactions were determined in all 91 inbred lines (10,000 87 x 91 matrices).  A median flux matrix was constructed by taking the median for each cell of these matrices and used as a representative flux-distribution for each line.   Across these lines, 71 reactions carried non-zero flux.  For 13 of these reactions, flux carried through the reaction (\textbf{v}) can be compared to (\textbf{v}$_{max}$) (table \ref{v_vmax_table}).  Four enzymes fluxes had a decent positive correlation between \textbf{v} and \textbf{v}$_{max}$, those related to the glycerol phosphate shunt, Pyruvate Dehydrogenase and Phosphofructokinase, suggesting that hierarchical control is important for regulating the flux through these reactions.  The fraction of v$_{max}$ varied greatly across enzymes, from Succinate Dehydrogenase, with a median v / v$_{max}$ of 0.482, to Phosphoglucose Isomerase, with a median v / v$_{max}$ of 0.000452.  For most enzymes v $<<$ v$_{max}$   
+
+For 11/13 v / v$_{max}$ was $<$ 0.1, 
+
+
+
+
+
+
+
+
+
+\begin{table}[h!]
+\caption{Correlations between \textbf{v} and \textbf{v}$_{max}$ across all lines, and median \textbf{v} / \textbf{v}$_{max}$ across lines.}\vspace{2mm}
+\begin{center}
+\begin{tabular}{lrrrr}
+  \toprule
+\textbf{Enzyme} & \multicolumn{1}{c}{\textbf{Spearman}} & \multicolumn{1}{c}{\textbf{Pearson}} & \multicolumn{1}{c}{\textbf{r}$^2$} & \multicolumn{1}{c}{\textbf{V / V}$_{max}$} \\ 
+  \midrule
+  Glycerol 3-Phosphate Dehydrogenase (cytosolic) & 0.558 & 0.567 & 0.322 & 0.00399 \\   Glycerol 3-Phosphate Dehydrogenase (mitochondrial) & 0.27 & 0.331 & 0.109 & 0.118 \\   Pyruvate Dehydrogenase & 0.21 & 0.238 & 0.0568 & 0.0157 \\   Phosphofructokinase & 0.231 & 0.235 & 0.055 & 0.0431 \\   Fumarase & -0.141 & -0.155 & 0.024 & 0.0221 \\   Phosphoglucomutase & -0.124 & -0.113 & 0.0127 & 0.00536 \\   Succinate Dehydrogenase & -0.12 & -0.091 & 0.00828 & 0.482 \\   Glucokinase & -0.101 & -0.0898 & 0.00807 & 0.103 \\   Malate Dehydrogenase (mitochondrial) & -0.0499 & -0.0787 & 0.00619 & 0.00618 \\   Phosphoglucose Isomerase & -0.00978 & -0.0701 & 0.00492 & 0.000452 \\   Malate Dehydrogenase (cytosolic) &  &  &  & 0.000361 \\   Glucose 6-Phosphate Dehydrogenase &  &  &  & 0.00704 \\   6-Phosphogluconate Dehydrogenase &  &  &  & 0.0068 \\ 
+   \bottomrule
+\end{tabular}
+\end{center}
+\label{v_vmax_table}
+\end{table}
+
+
+
+
+
+\subsubsection*{Flux balance analysis}
+
+Using flux balance analysis, we can seek a set of fluxes that is flux balanced and optimally matches observed rates of gas-exchange.  The ratio and magnitude of gas-exchange rates for a line and flux-constraints introduced by V$_{max}$ and thermodynamics will determine a matching set of fluxes.
+
+A simple metabolic model of central carbon metabolism containing 98 metabolites and 87 enzymatic or transport reactions was created based on XXX and KEGG.  Non flux-balanced boundary reactions were added that allowed for the free production or consumption of trehalose, glycogen. palmitate, water, oxygen and carbon dioxide.  
+
+Constraints bounding the maximum flux through a reaction as the measured V$_{max}$ or limiting reversibility using thermodynamics were incorporated using quadratic programming
+
+%\text{min}\hspace{5mm}(v_i^{CO_{2}} - r_i^{CO_{2}})^2 &+ (v_i^{O_{2}} - r_i^{O_{2}})^2\\
+\begin{align}
+\text{min}\hspace{5mm}(\textbf{Av} &- \textbf{b})^2\\
+s.t.\hspace{5mm}\textbf{Sv}_{i} &= \textbf{0}\notag\\
+\textbf{Gv}_{i} &\le \textbf{h}_{i}
+\end{align}
+
+For each inbred line, rates of CO$_{2}$ production and O$_{2}$ consumption were
+
+\textbf{v} is a vector of fluxes that is iteratively updated.  \textbf{S} is the stoichiometric matrix with rows of metabolites and columns of reactions (supplemental table).  \textbf{A} is a matrix specifying the gas-exchange reactions. \textbf{b} is vector of empirically determined rates of gas-exchange.  \textbf{G} is a matrix specifying bounded fluxes.  \textbf{h} is a vector specifying the maximal/minimal allowable flux due to experimentally-measured Vmaxes and reaction irreversibility.
+
+stoichiometry of drosophila glycolysis/TCA cycle/PPP/FAS/beta-oxidation and shuttles.
+
+
+\clearpage
+
+For each markov sample I inferred fluxes based on gas-exchange rates and Vmax bounds and then did an SVD to get the first 2 principal components and loadings across lines where FBA found a viable solution (i.e. Vcot-flux $\sim$ Vcot, Vo2-flux $\sim$ Vo2).  Across these samples, I calculated the median flux through each enzyme and then calculated the SVD of this.  To align each markov samples SVD to the median profile, I used Procrustes rotation to rotate SVD(markov)\$u aligning it to SVD(median)\$u.  The principal component loadings of the median flux distribution are shown in figure \ref{PCloadings}.  The principal components themselves are shown in figure \ref{PCvalues}: the median flux distribution PCs are shown as large points and the PCs of the first 1000 markov samples are shown as small dots.  This shows a nice segregation of populations based on the diffuse clouds of points.
+
+
+
+\begin{figure}[h!]
+\centering
+\includegraphics[]{flux_PCs.pdf}
+\caption{Principal component 1 plotted against principal component 2 for the median fluxes SVD (large points) and markov flux distribution SVDs (small points)}
+\label{PCvalues}
+\end{figure}
+
+\clearpage
+
+To predict the power requirements necessary to sustain flight, a function mapping velocity to power/weight can be formed.  As has been shown in Sun et al. 2003, using \textit{D. virilis} flight power is a J-shaped function of velocity, with intermediate forward velocities requiring the lowest energy.  This relationship described in terms of advance ratio / velocity / power can be translated to the smaller \textit{D. melanogaster} by noting that in \textit{melanogaster} an advance ratio of 0.32 results in a velocity of  0.85$\frac{m}{s}$ (Tran and Unden 1998) and the power requirement for hovering flight is about 60$\frac{W}{kg}$ (Lehman and Dickenson 1997).  
+
+With this function, the mechanical power requirement needed to sustain the flight velocity of each line can be determined (figure \ref{flight_velocity}).
+
+To translate this mechanical power requirement to ATP requirements:
+10\% efficiency of converting ATP chemical energy into work (Lehman and DIckenson 1997)
+46500 J per mole ATP
+This translates to around 10$^{-8}$ moles of ATP being required per second
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=3in]{flight_vel2.pdf}
+\caption{Power requirements for forward flight versus observed velocity of lines}
+\label{flight_velocity}
+\end{figure}
+
+
+\begin{table}[htdp]
+\caption{Sum of squared partial correlations for flight and gas-exchange phenotypes}
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+trait& variance explained \\\midrule
+VCO$_{2}$&0.0895\\
+VO$_{2}$&0.0235\\
+RQ&0.0668\\\addlinespace
+V$_{tot}$&0.0304\\
+a$_{t}$&0.0114\\
+a$_{c}$&0.0280\\
+a$_{a}$&0.0027\\
+V$_{z}$&0.0345\\
+TOangle&0.0768\\
+V$_{max}$&0.0320\\
+V$_{z}$$_{max}$&0.0389\\
+a$_{t}$$_{max}$&0.0046\\
+a$_{cmax}$&0.0018\\
+a$_{amax}$&0.0005\\
+$_{mm}$V&0.0601\\
+$_{mm}$V$_{z}$&0.0627\\
+$_{mm}$a$_{c}$&0.0237\\
+$_{mm}$a$_{t}$&0.0885\\
+$_{mm}$a$_{a}$&0.0303\\\bottomrule
+\end{tabular}
+\end{center}
+\label{tab:ss}
+\end{table}
+
+
+
+\section*{Materials and Methods}
+
+\normalsize
+
+\subsection*{Line Composition}
+
+The breeding of lines and the composition of the crosses is detailed in \citet{Greenberg2010}.  The 92 lines contain 17-19 inbred isofemale lines from the Netherlands, New York (Ithaca), Tasmania, Beijing, and Zimbabwe.  From these populations, 17 and 19 intrapopulation sparse-diallel round-robin crosses were reared from Beijing and Netherlands respectively. Lines and crosses were reared on a standard Yeast-Glucose medium at $25\, ^{\circ}\mathrm{C}$, with a 12 hour light-dark cycle.  Flies were presorted and maintained at a density of approximately thirty males per vial until they were assayed when 5-7 day old.  These lines have been previously characterized for the levels of 19 enzymes and along with five physiological variables as well as for fecundity, viability and developmental rate\cite{Greenberg2011}.
+
+\subsection*{Respirometry}
+
+A stop-flow respirometry with manual bolus integration approach to respirometry was used to amplify the signal from a cohort of flies for accurate quantification of CO$_{2}$ production and O$_2$ consumption.  This involves suspending flies in air of known composition for a known time and then subsampling a portion of this air to determine the change in the composition of the original sample as a result of the metabolic activity of the flies.  Atmospheric air was initially drawn into our respirometer at an average rate of 56.7 mL/min (sd 0.097 mL/min) by the SS3 subsampler (Sable Systems International, Las Vegas, NV, USA) through a drierite and soda lime column to dehydrate the air and remove CO$_2$.  This air was then pushed past the flush junction, injection port and a dehydrating magnesium perchlorate column and through the CA-10 carbon dioxide analyzer (Sable Systems International). After scrubbing injected CO$_2$ with an ascarite column, the gas passed through an FC-10 oxygen analyzer (Sable Systems International). A figure showing the plumbing layout of this system is presented in figure \ref{respplumb}.  For each replicate, cohorts of five flies were placed in a 3-way luer valve fitted syringe with 3.2 mL of air drawn from the flush junction and incubated at 25$\,^{\circ}\mathrm{C}$ (mean 25.23$\,^{\circ}\mathrm{C}$, sd 0.051$\,^{\circ}\mathrm{C}$) for approximately 30 minutes in an illuminated incubator.  Actual incubation time was determined precisely.  For each of two blocks, 3 mL of gas from three replicate syringes was serially injected into the injection port, four minutes apart.  Temperature, flow rate, O$_2$ partial pressure,  CO$_2$partial pressure and barometric pressure were determined each second.  The volume of O$_2$ valleys and CO$_2$ peaks was determined using the R script ``Respirometry - R''   
+
+\begin{figure}[h!]
+\includegraphics[scale = 0.5]{RespirometryRig.pdf}
+\caption{Respirometer schemata}
+\label{respplumb}
+\end{figure}
+
+\subsubsection*{Respirometry - R}
+
+In order to calculate the volume of carbon dioxide produced and oxygen consumed during an interval, the change in the \% composition of CO$_2$ or O$_2$ from the expected baseline gas composition is assessed at each time point.  As an injected sample flows through the respirometry setup, these deviations in the \% composition from the baseline will be reflected in a peak of CO$_2$ abundance and a valley of O$_2$ dearth in the respective partial pressures.  
+
+An automated approach to identifying peaks and calculating the expected background values during peaks was employed.  For both CO$_2$ and O$_2$, \% composition data over time were analyzed independently and peak volumes were later calculated.  To identify the regions corresponding to the background \% composition (i.e. \% composition in the absence of injected samples), a line was fitted to the observed data and regions over the fitted value for CO$_2$ and below the O$_2$ along with a buffer on either side were removed.  The resulting data was an overly-conservative, discontinuous set of background values that a third-degree polynomial was fitted over.  This fitted-background polynomial represented the expected value of the \% composition over the entire run in the absence of injected samples. From this point, the peaks and background states were differentiated using a 2-state Hidden Markov Model based upon the Viterbi Algorithm \cite{Rabiner1989}.  In this model, the marginal probability of the observation being in the background state was the probability of drawing the observed data from a normal distribution with mean equal to the fitted background at time t and standard deviation equal to the standard deviation of the distribution of observed minus fitted values over the conservatively labeled background interval.  The marginal probability of the observation being in the peak state was equal to one minus p(background).  The transition probabilities for transition among the background (bg) and peak (pk) states were bg $\rightarrow$ bg = 0.99, pk $\rightarrow$ bg = 0.5, bg $\rightarrow$ peak = 0.01, pk $\rightarrow$ pk = 0.5 for CO$_2$ and bg $\rightarrow$ bg = 0.99, pk $\rightarrow$ bg = 0.09, bg $\rightarrow$ peak = 0.01, pk $\rightarrow$ pk = 0.91 for O$_2$.  The calculation of the volume of O$_2$ and CO$_2$ represented by these HMM defined peaks is given by.
+
+\Large
+VCO$_2$ =  $\sum_{k=1}^n[FR{_i} * (F_{ek}^{'}CO_{2} -  F_{ik}^{'}CO_{2})]$
+
+
+VO$_2$ = $\sum_{k=1}^n[FR_{i} * \frac{(F_{ek}^{'}O_{2} - F_{ik}^{'}O_{2})}{(1-F_{ek}^{'}O_{2})}]$
+
+\normalsize
+
+Where, F$_{ik}^{'}$CO$_2$/O$_2$ is the fractional composition of CO$_2$/O$_2$ in the incurrent air, upstream of the injected sample, as approximated by the baseline at time k and F$_{ek}^{'}$CO$_2$/O$_2$ is the fractional composition of CO$_2$/O$_2$ in the excurrent air, as taken from the observed data at time k.  The flow rate (FR) for a given recording was set as the mean of the FR for that recording.  The observed volumes of gas were multiplied by 3.2/3.0 to account for subsampling 3mL from the 3.2mL of gas in the respiration-chamber.  The overall volume of gas was corrected for the number of flies and the incubation interval.
+
+\subsection*{Flight Capture}
+
+Two MCU120 motion capture infrared cameras (Qualysis, Gothenburg, Sweden), positioned 12 inches from the release site and oriented downward 35$^{\circ}$ relative to the horizontal plane were used to track flies as they emerged from vials and took off. After being calibrated these cameras identify the position of infrared reflecting markers every 120th of a second and orient them on a horizontal x-y plane and a vertical z axis.  For each vial, over a two-minute capture interval the Qualysis Track Manager (QTM) software (Qualysis) automatically identified the position of persistently infrared reflecting markers. Manual post-capture analysis of markers filtered out spurious reflections leaving markers with the hallmark of a takeoff trajectory.  The cartesian coordinates of these markers at each time point were outputted and trajectories were analyzed using the R script ``Flight - R''.  For each line, a minimum of ten flights was desired.  For 78 lines this sample size was reached, with an average of 15.8 quality flights per line and 1470 flights captured overall.  Flights were between 10 and 107 frames (120 frames per second), with a mean of 28.5 frames.  The number of frames was chiefly a function of the amount of time it took a fly to leave the capture boundaries rather than an inability to maintain the tracking.
+
+\subsubsection*{Flight - R}
+
+To ensure that markers represented the ascending takeoff flight from a single fly; trajectories were truncated to an interval where the fly was moving sufficiently fast to necessitate flight, was ascending and was not accelerating so quickly as to indicate a switch in marker identification between different objects.  To remove trajectories where the fly did not originate from the storage vial, trajectories originating from above a horizontal plane defining the release point were excluded.  Processed flights that were over 10 frames long (over $\frac{1}{12}$th of a seconds) were classified as valid trajectories and analyzed. The x,y and z coordinates of a trajectory of length n were fitted with a polynomial of curve of the order $\frac{n-1}{3}$. The derivative of these coefficients was taken as the velocity and multiplied by 120/1000 to convert to m/s.  The derivative the velocity coefficients was taken as the acceleration and multiplied by 120$^2$/1000 to convert to m/s$^2$.  These coefficients were then refitted to the original time-points and at each time point upwards velocity and total velocity as well as tangential, centripetal and angular accelerations were determined.  For these fitted quantities the values at the first and last two points were removed.  The mean and standard deviation of these quantities, as well as the takeoff angle (rise/run) and horizontal angle between the third and eighth frame were outputted to summarize a trajectory.  For five metrics ($v_{tot}, v{_z}, a{_t}, a{_c}, a{_a}$), the maximum value for each flight was identified and used to define an additional maximum metric for each trait.  The ratio of average to maximum values was then taken for each flight as a measure of the amount of time spent at peak performance values.
+
+Total Velocity, \[ v_{tot} = \sqrt{v_x^2 + v_y^2 + v_z^2} \]
+
+Tangential acceleration, \[ a_t = (a_x * v_x + a_y * v_y + a_z * v_z) / v_{tot}  \]
+
+Centripetal acceleration, \[ a_c = \sqrt{(a_x - a_t*v_x/v_{tot})^2 + (a_y - a_t*v_y/v_{tot})^2 + (a_z - a_t*v_z/v_{tot})^2}  \]
+
+Angular acceleration, \[ a_a = a_c/v_{tot}  \]
+
+Takeoff angle, \[ TOangle = arctan((z_8 - z_3) / \sqrt{(x_8-x_3)^2 + (y_8-y_3)^2}) \]
+
+Takeoff direction, \[ TOdir = arctan((y_8 - y_3) / (x_8 - x_3))  \]
+
+\subsection*{Bayesian modeling of interactions}
+
+%###Tony - Bayesian modeling methodology
+
+
+
+Decomposing the total variance ($\sigma^{2}_{z}$) of a trait (T) into the variance between lines (line variance - $\sigma^{2}_{g}$) and variance within a line (replicate variance - $\sigma^{2}_{e}$) reveals the extent of variation in this trait and how much of this variation is based upon genetic variation between lines.  These quantities define the normalized replicate coefficient of variation (CVR$_{e}$) = $\frac{\sigma_{e}}{\bar{T}}$; line coefficient of variation (CVR$_{g}$) = $\frac{\sigma_{g}}{\bar{T}}$; and broad sense heritability (H$^{2}$) = $\frac{CVR^{2}_{g}}{CVR^{2}_{g} + CVR^{2}_{e}}$
+
+The additive genetic variation of each traits were compared to determine total and partial correlations between all flight and gas exchange traits and a set of traits encompassing these traits as well as enzyme activity, metabolite abundance and life history traits XXXX:
+
+correlation:
+
+partial correlation:
+
+In order to determine the amount of additive genetic variability that can be explained by the combined effects of variability in all measured metabolic and/or gas-exchange traits, partial correlations were combined between flight and respirometry traits and all traits of interest.  For gas-exchange traits the relevant traits for comparison were enzyme activities and metabolite abundances.  For flight traits, the list was extended to include the gas-exchange traits.  The combined portion of additive variability explained by all of these traits (of number n) was determined according to:
+
+\Large
+$r_{j tot}$ = $\sum_{i = 1}^{n}r_{ji}^{2}$
+\normalsize
+
+\end{document}
