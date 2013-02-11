@@ -10,7 +10,7 @@ max.add.new <- 2000
 
 if(organism == "mel"){
 
-	setwd("/Users/seanhackett/Desktop/Cornell/Drosophila_metabolism/")
+	setwd("~/Desktop/Cornell/Drosophila_metabolism/")
 	load("drosophila_stoi.R")
 	metab.coord <- read.delim("drosNetLayout.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 	split.metab <- read.delim("met_split.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
