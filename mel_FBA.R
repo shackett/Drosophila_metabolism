@@ -112,6 +112,7 @@ if(use.mcmc == TRUE){
 	
 	#using mcmc samples
 	
+  # read in gas-exchange traits
 	mcmc_files <- list.files("MCMC_files/MCMC_inbred")[grep(ifelse(use.flight, "FLT", "RESP"), list.files("MCMC_files/MCMC_inbred"))]
 	mcmc_matrix <- NULL
 	for(mcmc_file in mcmc_files){
@@ -120,6 +121,15 @@ if(use.mcmc == TRUE){
 		rm(list = ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())])
 		}
 	
+  mcmc_files <- list.files("MCMC_files/MCMC_inbred")[grep(ifelse(use.flight, "FLT", "RESP"), list.files("MCMC_files/MCMC_inbred"))]
+  mcmc_flight <- NULL
+  for(mcmc_file in mcmc_files){
+		source(paste("MCMC_files/MCMC_inbred/", mcmc_file, sep = ""))
+		mcmc_flight <- rbind(mcmc_matrix, get(ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())]))
+		rm(list = ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())])
+		}
+  
+  
 	mcmc_list = list()
 	
 	if(use.flight == FALSE){
@@ -377,7 +387,6 @@ for(line in 1:nsamples){
 
 
 
-
 valid.sample <- rep(TRUE, times = length(colnames(median.calc.fluxes)))
 nonzero.flux <- median.calc.fluxes[apply(median.calc.fluxes[,valid.sample] == 0, 1, sum) != length(median.calc.fluxes[1, valid.sample]),]
 
@@ -451,7 +460,7 @@ princ_compDF <- rbind(princ_compDF, medianDF)
 #medianDF <- princ_compDF[princ_compDF$sample %in% 2,]
 
 
-princ_comp_plot <- ggplot(princ_compDF, aes(x = PC1, y = PC2, fill = factor(fill), colour = factor(pop), size = size, alpha = alpha, shape = shape)) + scale_size_identity() + scale_alpha_identity()  + scale_x_continuous(limits = c(-0.3, 0.35)) + scale_y_continuous(limits = c(-0.35, 0.3)) + scale_shape_identity() + scale_color_brewer(palette = "Set2", na.value = "BLACK") + scale_fill_brewer(palette = "Set2", guide = 'none') + guides(colour = guide_legend(title = "Population")) 
+princ_comp_plot <- ggplot(princ_compDF, aes(x = PC1, y = PC2, fill = factor(fill), colour = factor(pop), size = size, alpha = alpha, shape = shape)) + scale_size_identity() + scale_alpha_identity()  + scale_x_continuous(limits = c(-0.4, 0.4)) + scale_y_continuous(limits = c(-0.35, 0.5)) + scale_shape_identity() + scale_color_brewer(palette = "Set2", na.value = "BLACK") + scale_fill_brewer(palette = "Set2", guide = 'none') + guides(colour = guide_legend(title = "Population")) 
 princ_comp_plot + geom_point()
 dev.off()
 
@@ -481,28 +490,34 @@ Vmax.fraction <- od.measured.carried.flux/kinetic_enzymes
 #measure correlations between carried flux and vmax
 corr_v_vmax <- sapply(c(1:length(od.measured.carried.flux[1,])), function(x){
 	if(sd(od.measured.carried.flux[,x]) != 0){
-		corval <- signif(cor(abs(od.measured.carried.flux[,x]), kinetic_enzymes[,x], method = "spearman"), 3)
-		pcorval <- signif(cor(abs(od.measured.carried.flux[,x]), kinetic_enzymes[,x], method = "pearson"), 3)
-    r_square <- signif(cor(abs(od.measured.carried.flux[,x]), kinetic_enzymes[,x], method = "pearson")^2, 3)
-    print(plot(abs(od.measured.carried.flux[,x]) ~ kinetic_enzymes[,x], main = paste(colnames(od.measured.carried.flux)[x], "s", corval, "p2", r_square, sep = ": ")))
-    c(corval, pcorval, r_square)
+    carried_max <- cbind(od.measured.carried.flux[,x], kinetic_enzymes[,x])
+    carried_max <- carried_max[apply(is.na(carried_max), 1, sum) == 0,]
+    carried_max <- carried_max[carried_max[,1] != 0,]
+    
+		corval <- signif(cor(abs(carried_max[,1]), carried_max[,2], method = "spearman"), 3)
+		pcorval <- signif(cor(abs(carried_max[,1]), carried_max[,2], method = "pearson"), 3)
+    r_square <- signif(cor(abs(carried_max[,1]), carried_max[,2], method = "pearson")^2, 3)
+    print(plot(abs(carried_max[,1]) ~ carried_max[,2], main = paste(colnames(od.measured.carried.flux)[x], "s", corval, "p2", r_square, sep = ": ")))
+    c(corval, pcorval, r_square, length(carried_max[,1]))
     }else{
-			c(NA, NA, NA)
+			c(NA, NA, NA, NA)
 			}
 	})
 
 flux_corrTab <- cbind(t(corr_v_vmax), abs(apply(Vmax.fraction, 2, function(x){median(x[x != 0],na.rm = TRUE)})))
-flux_corrTab[apply(od.measured.carried.flux == 0, 2, sum) != 0,c(1:3)] <- NA
 flux_corrTab <- cbind(c("Alcohol Dehydrogenase", "Malic Enzyme", "Malate Dehydrogenase (cytosolic)", "Fatty Acid Synthase", "Phosphoglucose Isomerase", "Phosphofructokinase", "Glucose 6-Phosphate Dehydrogenase", "6-Phosphogluconate Dehydrogenase", "Phosphoglucomutase", "Glycogen Phosphorylase", "Glycogen Synthase", "Trehalase", "Glucokinase", "Glycerol 3-Phosphate Dehydrogenase (cytosolic)", "Glycerol 3-Phosphate Dehydrogenase (mitochondrial)", "Pyruvate Dehydrogenase", "Fumarase", "Malate Dehydrogenase (mitochondrial)", "Succinate Dehydrogenase"), flux_corrTab)
-colnames(flux_corrTab) <- c("Enzyme", "Spearman", "Pearson", "rSquared", "vmaxFrac")
+colnames(flux_corrTab) <- c("Enzyme", "Spearman", "Pearson", "rSquared", "Nlines", "vmaxFrac")
 flux_corrTab <- as.data.frame(flux_corrTab, stringsAsFactors = FALSE)
 flux_corrTab[,-1] <- apply(flux_corrTab[,-1], c(1,2), as.numeric)
-flux_corrTab <- flux_corrTab[!is.na(flux_corrTab[,5]),]
-
-
+flux_corrTab <- flux_corrTab[!is.na(flux_corrTab$vmaxFrac),]
+#flux_corrTab[flux_corrTab$Nlines == length(Vmax.fraction[,1]),]
+flux_corrTab[flux_corrTab$Nlines != length(Vmax.fraction[,1]),c(2:4)] <- NA
+flux_corrTab <- flux_corrTab[,colnames(flux_corrTab) != "Nlines"]          
+flux_corrTab <- flux_corrTab[!(flux_corrTab$Enzyme %in% c("Glycogen Phosphorylase", "Glycogen Synthase", "Trehalase")),]
+flux_corrTab <- flux_corrTab[order(flux_corrTab$rSquared, decreasing = TRUE),]
+  
 library(xtable)
 rownames(flux_corrTab) <- NULL
-xtable(flux_corrTab, display = c("s", "s", "g", "g", "g", "g"))
 print(xtable(flux_corrTab, display = c("s", "s", "g", "g", "g", "g"), digits = 3), include.rownames = FALSE)
 
 
@@ -546,7 +561,9 @@ if(use.line == TRUE){
 		}
 		
 
-#save PCs
+#Get gas-exchange for PCs
+
+medPCloadings[rownames(medPCloadings) %in% c("CO2 leaving", "O2 entering"),][1,]/medPCloadings[rownames(medPCloadings) %in% c("CO2 leaving", "O2 entering"),][2,]
 
 
 
