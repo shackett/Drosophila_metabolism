@@ -90,16 +90,18 @@ Past studies have found molecular and/or genetic variation in the traits that we
 
 \section*{Results}
 
-Despite our expansive knowledge of metabolism, relatively little effort has been devoted to understanding how natural genetic variation impacts metabolism and how this may effect fitness.
+\cite{Ibarra:2002hk, 
 
-In microbes where growth rate is a direct measure of fitness in an environment, variants effecting flux through \textcolor{red}{pathways} have been shown to effect GR, \textcolor{red}{selection}.  While metabolic fluxes are high in fast growing microbes (\textcolor{red}{example flux}), they trickle when compared to the extreme energetic requirements of insect flight.  Faced with the difficult task of maintaining such a high glycolytic and TCA flux, dependent on many enzymes and regulators, it is unclear how much natural variation could exist.  If extensive differences in metabolic output exist they would likely result in impairment of flight, a trait which is likely under strong selection.  Previous research in \textit{D. melanogaster} has shown that strong knockdowns of glycolytic enzymes are necessary to significantly perturb wingbeat frequency, while studies of natural variation have shown that variation in central carbon metabolism enzymes is rampant.  From existing work it is unclear whether the metabolic system of the \textit{D. melanogaster} energy utilization pathway is robust to natural variation because decreased flux in one enzyme can be absorbed by changing levels of metabolites, or whether simultaneous variation of many enzymes can result in net decrease in flux.  
+Despite our expansive knowledge of metabolism, relatively little effort has been devoted to understanding how natural genetic variation impacts metabolism and how this may affect fitness.  In microbes, where growth rate is a direct measure of fitness in an environment, numerous papers have demonstrated that selection can improve growth rates on a novel nutrient by directing higher levels of flux through appropriate pathways \cite{Ibarra:2002hk,Cadiere:2011ep}.  Non-microbes must possess the same responsiveness over long time-scales, but further have to deal with maintaining stable distributions of flux when natural variation in thousands of metabolic components exists.  In Drosophila, flux distributions need to not only be stable, but also energy generating flux must be extremely fast.
+
+While metabolic fluxes are high in fast growing microbes (\textcolor{red}{example flux}), they trickle when compared to the extreme energetic requirements of insect flight.  Faced with the difficult task of maintaining such a high glycolytic and TCA flux, dependent on many enzymes and regulators, it is unclear how much natural variation could exist.  If extensive differences in metabolic output exist they would likely result in impairment of flight, a trait which is under strong selection.  Previous research in \textit{D. melanogaster} has shown that strong knockdowns of glycolytic enzymes are necessary to significantly perturb wingbeat frequency, while studies of natural variation have shown that variation in central carbon metabolism enzymes is rampant.  From existing work it is unclear whether the metabolic system of the \textit{D. melanogaster} energy utilization pathway is robust to natural variation because decreased flux in one enzyme can be absorbed by changing levels of metabolites, or whether simultaneous variation of many enzymes can result in net decrease in flux and maladaptive flight performance.
 
 In order to determine whether there is sufficient natural variation in flight that weak genotypes can be purged, we first tracked takeoff flight trajectories using a set of 92 inbred lines previously used to determine the extent of variability in enzyme V$_{max}$ \cite{Greenberg:2011jf}.
 
 The presence of genetic variation underlying total velocity and takeoff angle has been previously demonstrated \cite{Montooth:2003wj}.  In addition to these previously used metrics, upward velocity, tangential acceleration along the path of flight, orthogonal centripetal acceleration and angular acceleration were calculated.  A study by Marden et. al. showed that selection for increased upwind flying ability resulted in selected flies with a higher mean velocity and lower takeoff angle than the parental population \cite{Marden:1997ue}.  Interestingly the increased flight velocity was not accomplished by selected lines having a higher maximum velocity, but rather by having a higher propensity towards reaching an invariant peak velocity.  To capture possible natural variation in this flight effort, the mean divided by the maximum velocity of a trajectory was calculated.  This analysis of the mean, maximum and the average divided by maximum for a trait was extended to upwards velocity and all three measured acceleration traits.  These metrics should collectively characterize the extreme energy requirements necessary for flight, lift, cornering ability and capacity to reach peak performance.
 
 %Flight Methodology
-To analyze variability in these metrics across lines, we used methods similar to Marden et al. 1997 to follow the takeoff performance of 1470 quality-controlled ascending flights, with over 10 flights captured for 78 of 92 lines.  Lines with few captured flights were a result of huge differences between lines in propensity to takeoff; a trait that we didn't systematically study but could be of future interest.  Across these 92 lines, there is considerable variation in a majority of the flight metrics, notably in velocity (both mean, maximum and their ratio), as well as takeoff angle and upward velocities (Figure \ref{linetraitvar}d:i).
+To analyze variability in these metrics across lines, we used methods similar to Marden et al. 1997 to follow the takeoff performance of 1470 quality-controlled ascending flights, with over 10 flights captured for 78 of 92 lines.  Lines with few captured flights were a result of differences between lines in propensity to takeoff.  Across these 92 lines, there is considerable heritable variation in a majority of the flight metrics, notably in velocity (both mean, maximum and their ratio), as well as takeoff angle and upward velocities (Figure \ref{linetraitvar}d:i).  For each of these traits, within each population there are lines with both low and high performance, with no large differences between populations.
 
 \begin{figure}[h!]
 \includegraphics[scale = 0.5]{line_specVar.pdf}
@@ -108,35 +110,65 @@ To analyze variability in these metrics across lines, we used methods similar to
 \label{linetraitvar}
 \end{figure}
 
-The presence of considerable variation in flight performance across segregants, \textcolor{red}{even greater in this set of lines than has previously been shown} underscores that there is sufficient variation for selection to act upon.  While the relationship between flight phenotypes and fitness is not simple, it is likely that higher takeoff angles, velocity and acceleration allow for improved fitness.  Higher performance in all of these metrics in turn require greater energy consumption and higher metabolic output.
+The presence of considerable heritable variation in flight performance across segregants clearly shows that there is sufficient variation for selection to act upon (Table \ref{tab:cvr}).  While the relationship between flight phenotypes and fitness is not simple, it is likely that higher takeoff angles, velocity and acceleration allow for improved fitness.  Higher performance in all of these metrics in turn require greater energy consumption and higher metabolic output.
 
-To determine whether energetic requirements of flight are paralleled in metabolic variation, we sought to determine if these Drosophila lines differed in either the metabolic capacity of enzymes or patterns of pathway utilization.  While tracking the energy output during flight would be most appropriate for making this comparison, due to experimental intractability, we thought to assess whether this relationship could be found using a model of metabolism created from resting flies.  In producing this sort of model, we thought to integrate both previously measured enzyme activities \cite{Greenberg:2011jf} as well as direct gas-exchange fluxes.  These gas-exchange rates, of CO$_{2}$ production and O$_{2}$ consumption are an important metabolic constraints as they are indicative of the overall flux through the electron transport chain as well as the net levels of biomolecule production or breakdown relative to energy generation.   
+To determine whether energetic requirements of flight are paralleled in metabolic variation, we sought to determine if these Drosophila lines differed in either the metabolic capacity of enzymes or patterns of pathway utilization.  While associating flight with its energetic determinants, an optimal approach would be to compare in-flight metabolism and gas-exchange with flight phenotypes.  Because of difficulties in sustaining the flight of a large number of \textit{Drosophila} for respirometry or enzyme kinetic experiments, measurements on cohorts of resting flies were taken, noting the caveat that associations with flight will be found only to the extent that variation across resting metabolic states can be treated as proxy for variability in flight metabolism.  In producing this sort of model, our goal was to integrate both previously measured enzyme activities \cite{Greenberg:2011jf} as well as direct gas-exchange fluxes.  These gas-exchange rates, of CO$_{2}$ production and O$_{2}$ consumption are an important metabolic constraints as they are indicative of the overall flux through the electron transport chain as well as the net levels of biomolecule production or breakdown relative to energy generation.   
 
 The rate of oxygen consumption as a measure of the production of ATP, as well as the rate of carbon dioxide production, an indicator of catabolic reactions during intermediate metabolism were measured in six replicates across two blocks for each line.  While many previous studies have assumed a constant respiratory quotient (RQ: ratio of CO$_{2}$ produced to O$_{2}$ consumed), and thus used CO$_{2}$ as a proxy for O$_{2}$ \cite{VanVoorhies:2004tf, Khazaeli:2004cm}, we additionally sought to determine if there was genetic variability in this trait.  Variability in these three traits are suspected to reflect the overall energy production of a line, as well as broad trends in metabolite utilization.
   
-Despite the considerable replicate variance of respiratory metrics, the genetic variability across lines and populations of \textit{Drosophila} is substantial (Figure \ref{linetraitvar}a-c).  Oxygen consumption is depressed in Beijing lines (despite them being the heaviest population), and this low oxygen consumption results in an elevated respiratory quotient, suggesting flux diversion into fatty acid synthesis.  This large population specific effect, is repeated, albeit to a lesser extent, in within-population variability in all gas-exchange phenotype, although most lines have a respiratory quotient less than one.
+In contrast to flight traits, where between-population variation was minimal, there is pronounced variation between populations in gas-exchange traits (Figure \ref{linetraitvar}a-c).  Oxygen consumption is depressed in Beijing lines (despite them being the heaviest population), and this low oxygen consumption elevates the respiratory quotient.  For all gas-exchange traits, there is ample heritable variation within each population (Table \ref{tab:cvr}).  
+
+\begin{table}[h!]
+\caption{Coefficients of variation and broad-sense heritability of gas-exchange and flight traits}\vspace{1mm}
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+Trait & Symbol & Replicate CVR& Line CVR&$H^{2}$\\\midrule
+Flight velocity & V&0.155 (0.142, 0.168)&0.196 (0.167, 0.231)&0.616 (0.535, 0.695)\\
+Tangential acceleration & a$_{t}$&0.140 (0.113, 0.173)&0.080 (0.065, 0.100)&0.246 (0.159, 0.365)\\
+Centripetal acceleration & a$_{c}$&0.225 (0.200, 0.253)&0.039 (0.032, 0.048)&0.029 (0.018, 0.047)\\
+Angular acceleration & a$_{a}$&0.226 (0.199, 0.254)&0.014 (0.012, 0.018)&0.004 (0.003, 0.006)\\
+Upwards velocity & V$_z$&0.133 (0.104, 0.169)&0.399 (0.325, 0.505)&0.900 (0.845, 0.939)\\
+Takeoff angle & TOangle&0.283 (0.265, 0.304)&0.116 (0.099, 0.139)&0.144 (0.108, 0.193)\\
+Maximum velocity & V$_{max}$&0.218 (0.203, 0.234)&0.157 (0.135, 0.186)&0.343 (0.276, 0.422)\\
+Maximum upward velocity & V$_{z-max}$&0.267 (0.247, 0.289)&0.204 (0.173, 0.243)&0.369 (0.297, 0.450)\\
+Maximum tangential acceleration & a$_{t-max}$&0.498 (0.464, 0.537)&0.013 (0.011, 0.016)&0.001 (0.000, 0.001)\\
+Maximum centripetal acceleration & a$_{c-max}$&0.515 (0.476, 0.558)&0.011 (0.009, 0.014)&0.000 (0.000, 0.001)\\
+Maximum angular acceleration & a$_{a-max}$&0.511 (0.473, 0.552)&0.003 (0.003, 0.004)&0.000 (0.000, 0.000)\\
+Mean over max velocity & $_{mm}$V&0.108 (0.103, 0.114)&0.080 (0.068, 0.096)&0.355 (0.283, 0.443)\\
+Mean over max upward velocity & $_{mm}$V$_z$&0.142 (0.134, 0.150)&0.097 (0.083, 0.116)&0.322 (0.255, 0.403)\\
+Mean over max tangential acceleration & $_{mm}$a$_t$&0.289 (0.269, 0.312)&0.173 (0.146, 0.207)&0.264 (0.204, 0.337)\\
+Mean over max centripetal acceleration & $_{mm}$a$_c$&0.276 (0.257, 0.297)&0.155 (0.131, 0.186)&0.240 (0.184, 0.312)\\
+Mean over max angular acceleration & $_{mm}$a$_a$&0.294 (0.273, 0.317)&0.174 (0.148, 0.207)&0.259 (0.201, 0.329)\\\addlinespace
+Rate of CO$_2$ production & Vcot&0.160 (0.143, 0.179)&0.077 (0.065, 0.093)&0.190 (0.133, 0.263)\\
+Rate of O$_2$ consumption & Vox&0.224 (0.200, 0.252)&0.066 (0.054, 0.081)&0.080 (0.052, 0.120)\\
+Respiratory Quotient & RQ&0.137 (0.124, 0.152)&0.096 (0.081, 0.116)&0.331 (0.258, 0.419)\\\bottomrule
+\end{tabular}
+\end{center}
+\label{tab:cvr}
+\end{table}
+
+\begin{figure}[p]
+\includegraphics[scale = 0.8]{Correlations.pdf}
+\caption{\textbf{a)} Partial correlations of over 0.1 between gas-exchange, flight, metabolic and life-history traits.  Respirometry traits: VCO$_{2}$, VO$_{2}$, RQ; Flight traits: TOangle, for a$_{t}$, a$_{c}$, a$_{a}$, V$_{tot}$, V$_{z}$, max indicates the maximum value of a flight and mm indicates the mean divided by max for a trait; Enzyme kinetics traits: 19 enzymes; Life history traits: fecundity, viability, weight, developmental rate; metabolites: only those with correlations shown - Glycogen. \textbf{b)} Correlations of over 0.2 between gas-exchange, flight, metabolic and life-history traits. Metabolic, respirometry and life history traits with no correlations over 0.2 are not shown}
+\vspace{-30mm}
+\includegraphics[]{Correlations_total.pdf}
+\label{corr}
+\end{figure}
+
+% correlations between traits
+
+Across the lines of $\textit{D. melanogaster}$ studied, there is considerable variation in almost all of the traits examined.  When correlating the genetic variability in flight and gas-exchange phenotypes with these traits and additional metabolic and life-history traits, 35 partial correlations had an absolute value greater than 0.1 (Figure \ref{corr}a) and 18 total pearson correlations had a magnitude of greater than 0.2 (Figure \ref{corr}b).  These thresholds were chosen because they yielded associations of a potentially interesting magnitude although additional correlations were found to be significant using permutation testing.  
+
+One striking feature of the set of partial and total correlations is the dense connectivity of the flight correlations.  The large number of total correlations suggests that these traits are functionally related, where a high value of one flight trait suggests higher values of other metrics.  These relationships are likely due to a hidden determinant such as the overall health of a line, it's capacity for energy generation or efficiency of biomechanical utilization.  The large number of partial correlations between flight traits similarly reflects some common features shared by pairs of metrics but also may be due to differences in flight strategies across lines.  Differences in flight strategies are known to exist and be associated with fecundity and other aspects of fitness \cite{Watt:1983vy, Dudley:2002tb}.
+
+Several of these correlations are between traits that are expressible as a combination of two other traits, namely the respiratory quotient, and mean/max of flight traits and angular acceleration.  To the extent that these traits are redundant with respect to their constituent traits, the total correlations of these traits should be large.  This is clearly not the case for the respiratory quotient, because the correlation between RQ and both VCO$_{2}$ and VO$_{2}$ is minimal.  For the $\frac{mean}{max}$ velocity and acceleration traits, there are significant correlations between $_{mm}$V$_{z}$ and V$_{z}$, as well as between $_{mm}$V and V, but the presence of other partial correlations for each of these metrics, confirms their solitary importance.  The relationship between angular acceleration and both velocity and centripetal acceleration is similarly confounded resulting in covariation of $_{mm}$a$_{c}$ and $_{mm}$a$_{a}$ in the partial correlations and a$_{c-max}$ and a$_{a-max}$ in the total correlations.  
+
+There are clear physiological associations between metabolism, its consequential gas-exchange and the extreme amounts of energy necessary to initiate and sustain \textit{Drosophila} flight.  The presence of nine partial correlations over 0.1 between flight traits and either gas-exchange or metabolic traits indicates that there are pairwise relationships of large effect between these pairs of phenotypes, but because energy production for flight is largely a systems level property of the metabolic network, a measure of the proportion of the total flight variability explained by variability in all enzymes and gas-exchange traits (Table \ref{tab:ss}) might be more relevant comparison.  This measure was determined as the sum of squared partial correlations of flight traits across all enzyme activity, metabolite and gas-exchange traits.  This indicates that the metabolic dependence of flight metrics varies widely, with most traits having between 3 and 9\% of their variance explained by the assayed metabolic traits, with the exception of some of the poorly modeled acceleration traits noted previously.  Interestingly, the top sensitivity was observed for the takeoff angle, mean divided by maximum tangential acceleration and for mean over max total and upward velocity.  This suggests that the most energetically taxing aspects of flight or at least those requiring extreme enzymatic activities are ascent and sustained peak performance, rather than just fast speeds or acceleration.
 
 
 
 
-
-
-
-Flight performance is central to the fitness of \textit{D. melanogaster}, and while performance can be modulated by strong enzyme mutations, and through directed evolution \textcolor{red}{cite}, it is unclear how flight is constrained in the wild.  To investigate the sources of natural variation in flight performance, we tracked takeoff flight trajectories using a set of 92 inbred lines previously used to determine the extent of variability in enzyme V$_{max}$ \cite{Greenberg:2011jf} .
-
-
-
-
-
-
-
-
-
-From Table \ref{tab:cvr} it can be seen that the largest heritabilities of any of flight traits were for the six velocity traits measured.  While these traits are correlated either because they are partially confounded by definition or through mutual covariation with another governing trait, such as rate of ATP synthesis, they also convey unique information.  Variation in mean velocity should be expected because of its response during Marden selection experiments.  But while these experiments didn't see a selective response for maximum velocity, there is clearly variability across lines in this trait as well, although their invariant upper bound of maximum velocity was not surpassed \cite{Marden:1997ue}.  The upwards velocity measures have this same or greater level of heritability than total velocity traits, interestingly this heritability is considerably greater than for the takeoff angle.  For seven traits, there are substantial differences across lines, although population divergence is weak (Figure \ref{linetraitvar}d:i).  
-
-Compared to the considerable variability of velocity traits, the heritabilities of the mean and maximum acceleration traits are minute, with the exception of mean tangential acceleration.  This inappreciable heritability, represent a difficulty in dealing with data when the variance is the same magnitude as the mean.  Applying an ANOVA to the raw metrics indicates that there is interline variability in these traits, despite the minimal heritability estimated from our hierarchical bayesian modeling.  Still, the ratio of these poorly modeled metrics $_{mm}$a$_c$$\left(\frac{a_{c}}{a_{c-max}}\right)$, $_{mm}$a$_t$$\left(\frac{a_{t}}{a_{t-max}}\right)$ \& $_{mm}$a$_a$$\left(\frac{a_{a}}{a_{a-max}}\right)$, vary considerably between lines and have heritabilities from 0.240 - 0.264.  
-
-While associating flight with its energetic determinants, an optimal approach would be to compare in-flight metabolism and gas-exchange with flight phenotypes.  Because of difficulties in sustaining the flight of a large number of \textit{Drosophila} for respirometry or enzyme kinetic experiments, measurements on cohorts of resting flies were taken.  In this setting, associations with flight will be found only to the extent that variation across resting metabolic states can be treated as proxy for variability in flight metabolism.  This studies discovery of significant associations between flight and resting metabolic traits suggests that this postulate is at least partially true.
 
 %Time of maximal velocity - jump versus continuous acceleration
 %Looking at the time at which the tangential acceleration is maximized over the flight interval indicates that most flights have the highest tangential acceleration either immediately at or near takeoff or at the termination of tracking.  Past work has shown that initial takeoff in $\textit{Drosophila}$ occurs through jumping \cite{Zumstein:2004dt}.  The high tangential acceleration near takeoff is likely because of the influence of jumping over the first few frames.  This rapid acceleration would allow an initially rapid approach towards steady velocity.  Additionally, the high number of trajectories with maximal tangential acceleration at the termination of tracking indicates that many flies have not yet reached their peak velocity over the course of the takeoff trajectory (mean 237ms).  This is further supported by 38$\%$ of flights having the highest mean velocity in the last 10\% of the recorded flight.  This means that the true maximum velocity of some lines may exceed what we are capable of measuring, although the measured average velocities are consistent with those from Marden et al. 1997 (0.464 \& 0.516 m/s) \cite{Marden:1997ue}. 
@@ -168,39 +200,11 @@ Compared to the considerable variability of velocity traits, the heritabilities 
 
 While associating flight with its energetic determinants, an optimal approach would be to compare in-flight metabolism and gas-exchange with flight phenotypes.  Because of difficulties in sustaining the flight of a large number of \textit{Drosophila} for respirometry or enzyme kinetic experiments, measurements on cohorts of resting flies were taken.  In this setting, associations with flight will be found only to the extent that variation across resting metabolic states can be treated as proxy for variability in flight metabolism.  This studies discovery of significant associations between flight and resting metabolic traits suggests that this postulate is at least partially true.
 
-\textbf{\textit{Variability in gas-exchange phenotypes:}}
+\textbf{\textit{Variability in flight phenotypes:}}
 
 As can be seen from Table \ref{tab:cvr}, there is high variance in CO$_{2}$ production across lines, but there is more between replicates of the same line.  When looking at O$_{2}$ consumption this gap is extended, with a larger amount of between-replicate variability resulting in a decreased heritability for the trait.  This higher between-replicate variability is likely a function of the higher imprecision of O$_{2}$ measurement than CO$_{2}$.  When looking at the ratio of these values (the respiratory quotient) the heritability is higher, likely because much of the experimental variability that effects O$_{2}$ and CO$_{2}$ affects both similarly.  
 
-\begin{table}[h!]
-\caption{Coefficients of variation and broad-sense heritability of gas-exchange and flight traits}\vspace{1mm}
-\begin{center}
-\begin{tabular}{lcccc}
-\toprule
-Trait & Symbol & Replicate CVR& Line CVR&$H^{2}$\\\midrule
-Rate of CO$_2$ production & Vcot&0.160 (0.143, 0.179)&0.077 (0.065, 0.093)&0.190 (0.133, 0.263)\\
-Rate of O$_2$ consumption & Vox&0.224 (0.200, 0.252)&0.066 (0.054, 0.081)&0.080 (0.052, 0.120)\\
-Respiratory Quotient & RQ&0.137 (0.124, 0.152)&0.096 (0.081, 0.116)&0.331 (0.258, 0.419)\\\addlinespace
-Flight velocity & V&0.155 (0.142, 0.168)&0.196 (0.167, 0.231)&0.616 (0.535, 0.695)\\
-Tangential acceleration & a$_{t}$&0.140 (0.113, 0.173)&0.080 (0.065, 0.100)&0.246 (0.159, 0.365)\\
-Centripetal acceleration & a$_{c}$&0.225 (0.200, 0.253)&0.039 (0.032, 0.048)&0.029 (0.018, 0.047)\\
-Angular acceleration & a$_{a}$&0.226 (0.199, 0.254)&0.014 (0.012, 0.018)&0.004 (0.003, 0.006)\\
-Upwards velocity & V$_z$&0.133 (0.104, 0.169)&0.399 (0.325, 0.505)&0.900 (0.845, 0.939)\\
-Takeoff angle & TOangle&0.283 (0.265, 0.304)&0.116 (0.099, 0.139)&0.144 (0.108, 0.193)\\
-Maximum velocity & V$_{max}$&0.218 (0.203, 0.234)&0.157 (0.135, 0.186)&0.343 (0.276, 0.422)\\
-Maximum upward velocity & V$_{z-max}$&0.267 (0.247, 0.289)&0.204 (0.173, 0.243)&0.369 (0.297, 0.450)\\
-Maximum tangential acceleration & a$_{t-max}$&0.498 (0.464, 0.537)&0.013 (0.011, 0.016)&0.001 (0.000, 0.001)\\
-Maximum centripetal acceleration & a$_{c-max}$&0.515 (0.476, 0.558)&0.011 (0.009, 0.014)&0.000 (0.000, 0.001)\\
-Maximum angular acceleration & a$_{a-max}$&0.511 (0.473, 0.552)&0.003 (0.003, 0.004)&0.000 (0.000, 0.000)\\
-Mean over max velocity & $_{mm}$V&0.108 (0.103, 0.114)&0.080 (0.068, 0.096)&0.355 (0.283, 0.443)\\
-Mean over max upward velocity & $_{mm}$V$_z$&0.142 (0.134, 0.150)&0.097 (0.083, 0.116)&0.322 (0.255, 0.403)\\
-Mean over max tangential acceleration & $_{mm}$a$_t$&0.289 (0.269, 0.312)&0.173 (0.146, 0.207)&0.264 (0.204, 0.337)\\
-Mean over max centripetal acceleration & $_{mm}$a$_c$&0.276 (0.257, 0.297)&0.155 (0.131, 0.186)&0.240 (0.184, 0.312)\\
-Mean over max angular acceleration & $_{mm}$a$_a$&0.294 (0.273, 0.317)&0.174 (0.148, 0.207)&0.259 (0.201, 0.329)\\\bottomrule
-\end{tabular}
-\end{center}
-\label{tab:cvr}
-\end{table}
+
 
 \clearpage
 
@@ -215,6 +219,8 @@ Mean over max angular acceleration & $_{mm}$a$_a$&0.294 (0.273, 0.317)&0.174 (0.
 \end{figure}
 
 % correlations between traits
+
+
 
 Across the lines of $\textit{D. melanogaster}$ studied, there is considerable variation in almost all of the traits examined.  When correlating the genetic variability in flight and gas-exchange phenotypes with these traits and additional metabolic and life-history traits, 35 partial correlations had an absolute value greater than 0.1 (Figure \ref{corr}a) and 18 total pearson correlations had a magnitude of greater than 0.2 (Figure \ref{corr}b).  These thresholds were chosen because they yielded associations of a potentially interesting magnitude although additional correlations were found to be significant using permutation testing.  
 
