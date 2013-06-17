@@ -16,8 +16,14 @@ library(limSolve)
 library(gplots)
 library(colorRamps)
 library(stringr)		
+library(reshape2)
 
 n_mcmc_samples <- 10000
+
+rxNames <- c(colnames(joint.stoi)[!(colnames(joint.stoi) %in% c("Trehalose usage", "Glycogen usage", "Trehalase_c", "Phosphoglucomutase_c"))], "Glucose uptake")
+joint.stoi <- joint.stoi[,!(colnames(joint.stoi) %in% c("Trehalose usage", "Glycogen usage", "Trehalase_c", "Phosphoglucomutase_c"))]
+joint.stoi <- data.frame(joint.stoi, GlucoseUptake = ifelse(rownames(joint.stoi) == "D-Glucose_c", 1, 0))
+colnames(joint.stoi) <- rxNames
 
 ##### a few functions
 
@@ -30,39 +36,26 @@ degree = length(power.lm$coef)-1
 apply(matrix(power.lm$coef, ncol = degree +1, nrow = length(velocity.vector), byrow = TRUE)*(matrix(velocity.vector, ncol = degree +1, nrow = length(velocity.vector), byrow = FALSE)^matrix((0:(length(power.lm$coef)-1)), ncol = degree +1, nrow = length(velocity.vector), byrow = TRUE)), 1, sum)}
 
 
-
-	
 ### using only a single sample or initializing MCMC samples
 if(use.line == TRUE){
-line.enzyme <- read.table("MCMC_files/lnMat.tsv", sep = "\t", header = TRUE)
-line.flight <- read.table("MCMC_files/FLTlnMns.tsv", sep = "\t", header = TRUE)
-rownames(line.enzyme) <- as.character(line.enzyme$ln_nam)
-rownames(line.flight) <- as.character(line.flight$ln_nam)
-line.enzyme <- line.enzyme[,-1]
-#setting negative vmax values to 0
-line.enzyme[line.enzyme < 0] <- 0
-
-if(use.flight == FALSE){
-line.resp <- read.table("MCMC_files/RESPlnMns.tsv", sep = "\t", header = TRUE)
-rownames(line.resp) <- as.character(line.resp$ln_nam)
-line.resp <- line.resp[,-1]	
-	}
-if(use.flight == TRUE){
-flightM <- read.table("MCMC_files/FLTlnMns.tsv", sep = "\t", header = TRUE)
-line.flight <- data.frame(maxVel = flightM[,colnames(flightM) %in% "maxv"])
-rownames(line.flight) <- flightM$"ln_nam"
-	}
-
-### set the fluxes of crosses equal to the average of their component lines
-### need to correct differently for weight - get line weights from Tony
-#F1crosses <- rownames(line.resp)[!(rownames(line.resp) %in% rownames(line.enzyme))]
-#F1cross_comp <- t(sapply(F1crosses, function(lines){unlist(strsplit(lines, "_"))}))
-#cross_kinetics <- t(sapply(c(1:length(F1cross_comp[,1])), function(cross){
-#	apply(line.enzyme[rownames(line.enzyme) %in% F1cross_comp[cross,],], 2, mean)
-#	}))
-#rownames(cross_kinetics) <- F1crosses
-#line.enzyme <- rbind(line.enzyme, cross_kinetics)
-
+  line.enzyme <- read.table("MCMC_files/lnMat.tsv", sep = "\t", header = TRUE)
+  line.flight <- read.table("MCMC_files/FLTlnMns.tsv", sep = "\t", header = TRUE)
+  rownames(line.enzyme) <- as.character(line.enzyme$ln_nam)
+  rownames(line.flight) <- as.character(line.flight$ln_nam)
+  line.enzyme <- line.enzyme[,-1]
+  #setting negative vmax values to 0
+  line.enzyme[line.enzyme < 0] <- 0
+  
+  if(use.flight == FALSE){
+    line.resp <- read.table("MCMC_files/RESPlnMns.tsv", sep = "\t", header = TRUE)
+    rownames(line.resp) <- as.character(line.resp$ln_nam)
+    line.resp <- line.resp[,-1]  
+  }
+  if(use.flight == TRUE){
+    flightM <- read.table("MCMC_files/FLTlnMns.tsv", sep = "\t", header = TRUE)
+    line.flight <- data.frame(maxVel = flightM[,colnames(flightM) %in% "maxv"])
+    rownames(line.flight) <- flightM$"ln_nam"
+  }
 }
 
 
@@ -112,43 +105,56 @@ if(use.mcmc == TRUE){
 	
 	#using mcmc samples
 	
-  # read in gas-exchange traits
-	mcmc_files <- list.files("MCMC_files/MCMC_inbred")[grep(ifelse(use.flight, "FLT", "RESP"), list.files("MCMC_files/MCMC_inbred"))]
+  # read in gas-exchange trait markov samples
+	mcmc_files <- list.files("MCMC_files/MCMC_inbred")[grep("RESP", list.files("MCMC_files/MCMC_inbred"))]
 	mcmc_matrix <- NULL
 	for(mcmc_file in mcmc_files){
 		source(paste("MCMC_files/MCMC_inbred/", mcmc_file, sep = ""))
-		mcmc_matrix <- rbind(mcmc_matrix, get(ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())]))
-		rm(list = ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())])
+		mcmc_matrix <- rbind(mcmc_matrix, get(ls()[grep("RESP", ls())]))
+		rm(list = ls()[grep("RESP", ls())])
 		}
 	
-  mcmc_files <- list.files("MCMC_files/MCMC_inbred")[grep(ifelse(use.flight, "FLT", "RESP"), list.files("MCMC_files/MCMC_inbred"))]
+  # read in flight trait markov samples
+  mcmc_files <- list.files("MCMC_files/MCMC_inbred")[grep("FLT", list.files("MCMC_files/MCMC_inbred"))]
   mcmc_flight <- NULL
-  for(mcmc_file in mcmc_files){
+	for(mcmc_file in mcmc_files){
 		source(paste("MCMC_files/MCMC_inbred/", mcmc_file, sep = ""))
-		mcmc_flight <- rbind(mcmc_matrix, get(ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())]))
-		rm(list = ls()[grep(ifelse(use.flight, "FLT", "RESP"), ls())])
+		mcmc_flight <- rbind(mcmc_flight, get(ls()[grep("FLT", ls())]))
+		rm(list = ls()[grep("FLT", ls())])
 		}
   
   
 	mcmc_list = list()
 	
-	if(use.flight == FALSE){
-		
-			line.resp <- read.table("MCMC_files/RESPlnMns.tsv", sep = "\t", header = TRUE)
-			rownames(line.resp) <- as.character(line.resp$ln_nam)
-			line.resp <- line.resp[,-1]
-			
-			mcmc_list$Vcot = mcmc_matrix[,grep("mu.ln\\[Vcot,", colnames(mcmc_matrix))]
-			mcmc_list$Vox = mcmc_matrix[,grep("mu.ln\\[Vox,", colnames(mcmc_matrix))]
-			colnames(mcmc_list$Vcot) <- rownames(line.resp); colnames(mcmc_list$Vox) <- rownames(line.resp)
-		
-		}else{
-			
-			#FINISH ME
-			
-			}
-		
-	}
+  # convert respirometry traits to a list
+  
+	line.resp <- read.table("MCMC_files/RESPlnMns.tsv", sep = "\t", header = TRUE)
+	rownames(line.resp) <- as.character(line.resp$ln_nam)
+	line.resp <- line.resp[,-1]
+	
+	mcmc_list$Vcot = mcmc_matrix[,grep("mu.ln\\[Vcot,", colnames(mcmc_matrix))]
+	mcmc_list$Vox = mcmc_matrix[,grep("mu.ln\\[Vox,", colnames(mcmc_matrix))]
+	colnames(mcmc_list$Vcot) <- rownames(line.resp); colnames(mcmc_list$Vox) <- rownames(line.resp)
+	
+	
+  
+  line.flt <- read.table("MCMC_files/FLTlnMns.tsv", sep = "\t", header = TRUE)
+  rownames(line.flt) <- as.character(line.flt$ln_nam)
+	line.flt <- line.flt[,-1]
+	
+  
+  flight_formatting <- as.data.frame(t(sapply(colnames(mcmc_flight)[grep('mu.ln', colnames(mcmc_flight))], function(x){
+    strsplit(regmatches(x, regexpr('\\[[a-z,0-9A-Z]+\\]', x)), split = '\\[|,|\\]')[[1]][-1]
+  })))
+	colnames(flight_formatting) <- c("trait", "line")
+  flight_formatting$line <- rownames(line.flt)[as.numeric(flight_formatting$line)]
+  flight_formatting$index <- grep('mu.ln', colnames(mcmc_flight))
+  
+  mcmc_flight <- mcmc_flight[,flight_formatting$index]
+	mcmc_flight_melt <- melt(data.frame(flight_formatting, t(mcmc_flight)), id.vars = colnames(flight_formatting))
+  mcmc_flight_cast <- acast(mcmc_flight_melt, formula = line ~ variable ~ trait, value.var = "value")
+  #names(mcmc_flight_cast[1,1,])
+  }
 
 
 ###### Read in and calculate the paramters needed to transform A/s into moles/s using the beer-lambert law and path-length calculated from the well-geometry and volume of a microtiter-assay
@@ -206,6 +212,10 @@ for (i in 1:length(enzyme_moles_per_second[1,])){
 
 kinetic_enzymes = enzyme_moles_per_second[,apply(is.na(enzyme_moles_per_second), 2, sum) == 0]
 kinetic_reactions <- unlist(lapply(colnames(kinetic_enzymes), find.name, assay_parameters)) 
+
+kinetic_reactions <- kinetic_reactions[!(colnames(kinetic_enzymes) %in% c("PGM", "TRE"))]
+kinetic_enzymes <- kinetic_enzymes[,!(colnames(kinetic_enzymes) %in% c("PGM", "TRE"))]
+
 
 if(use.flight == TRUE){
 
@@ -309,21 +319,21 @@ for (line in c(1:nsamples)){
 
 #reactions corresponding to each measured Vmax
 
-G_flux <- matrix(data = NA, ncol = length(kinetic_enzymes[1,]), nrow = length(joint.stoi.red[1,])) 
-H_flux <- rep(NA, times = length(kinetic_enzymes[1,]))
-for (i in 1:length(kinetic_enzymes[1,])){
-	if(kinetic_reactions[i] %in% "Succinate dehydrogenase_m"){
-		G_flux[,i] <- ifelse(colnames(joint.stoi.red) == kinetic_reactions[i], -1, 0)
-		H_flux[i] <- -1*kinetic_enzymes[line,i]*10
-		}else{
-		G_flux[,i] <- ifelse(colnames(joint.stoi.red) == kinetic_reactions[i], -1, 0)
-		H_flux[i] <- -1*kinetic_enzymes[line,i]}
-	#exception for bidirectional vmax measurements
-	if(kinetic_reactions[i] %in% c("Malate dehydrogenase_m", "Phosphoglucomutase_c")){
-		G_flux <- cbind(G_flux, ifelse(colnames(joint.stoi.red) == kinetic_reactions[i], 1, 0))
-		H_flux <- c(H_flux, -1*kinetic_enzymes[line,i])
-	}}
-G_flux <- t(G_flux)
+#G_flux <- matrix(data = NA, ncol = length(kinetic_enzymes[1,]), nrow = length(joint.stoi.red[1,])) 
+#H_flux <- rep(NA, times = length(kinetic_enzymes[1,]))
+#for (i in 1:length(kinetic_enzymes[1,])){
+#	if(kinetic_reactions[i] %in% "Succinate dehydrogenase_m"){
+#		G_flux[,i] <- ifelse(colnames(joint.stoi.red) == kinetic_reactions[i], -1, 0)
+#		H_flux[i] <- -1*kinetic_enzymes[line,i]*10
+#		}else{
+#		G_flux[,i] <- ifelse(colnames(joint.stoi.red) == kinetic_reactions[i], -1, 0)
+#		H_flux[i] <- -1*kinetic_enzymes[line,i]}
+	#exception for vmax of reversible reactions
+#	if(kinetic_reactions[i] %in% c("Malate dehydrogenase_m", "Phosphoglucomutase_c")){
+#		G_flux <- cbind(G_flux, ifelse(colnames(joint.stoi.red) == kinetic_reactions[i], 1, 0))
+#		H_flux <- c(H_flux, -1*kinetic_enzymes[line,i])
+#	}}
+#G_flux <- t(G_flux)
 
 G_irr = matrix(data = NA, ncol = length(irreversible), nrow = length(joint.stoi.red[1,]))
 for (i in 1:length(irreversible)){
@@ -332,8 +342,10 @@ G_irr[,i] = ifelse(colnames(joint.stoi.red) == irreversible[i], 1, 0)
 G_irr <- t(G_irr)
 H_irr = rep(0, times = length(irreversible))
 
-G <- rbind(G_flux, G_irr)
-h <- c(H_flux, H_irr)
+#G <- rbind(G_flux, G_irr)
+#h <- c(H_flux, H_irr)
+G <- G_irr
+h <- H_irr
 
 
 #reactions for CO2 and O2 exchange
@@ -435,8 +447,9 @@ colnames(medPCloadings) <- colnames(avgSVD) <- paste("PC", c(1:n.components), se
 rownames(medPCloadings) <- rownames(nonzero.flux)
 
 princ_compDF <- data.frame(sample = 0, avgSVD, pop = line.pop, size = 3, alpha = 1, stringsAsFactors = FALSE)
+princ_compSave <- list()
 
-for(mcmc_sample in 1:1000){
+for(mcmc_sample in 1:n_mcmc_samples){
 	
 	submat <- FBA_list[[mcmc_sample]][apply(FBA_list[[mcmc_sample]] != 0, 1, sum, na.rm = TRUE) != 0, apply(is.na(FBA_list[[mcmc_sample]]), 2, sum) == 0]
 	
@@ -448,9 +461,16 @@ for(mcmc_sample in 1:1000){
 	#rotate the sampleSVD to align against the median SVD
 	#rotSVD <- procOPA(avgSVD, sampleSVD, scale = FALSE, reflect = TRUE)$Bhat
 	colnames(rotSVD) <- paste("PC", c(1:n.components), sep = "")
-	princ_compDF <- rbind(princ_compDF, data.frame(sample = mcmc_sample, rotSVD, pop = line.pop[apply(is.na(FBA_list[[mcmc_sample]]), 2, sum) == 0], size = 1, alpha = 0.08))
+	rownames(rotSVD) <- colnames(submat)
+  
+  princ_compSave[[mcmc_sample]] <- rotSVD
+  
+  princ_compDF <- rbind(princ_compDF, data.frame(sample = mcmc_sample, rotSVD, pop = line.pop[apply(is.na(FBA_list[[mcmc_sample]]), 2, sum) == 0], size = 1, alpha = 0.08))
 	
 	}
+
+save(princ_compDF, princ_compSave, file = "alignedPCs.Rdata")
+#load("alignedPCs.Rdata") # if you dont want to wait
 
 medianDF <- cbind(princ_compDF[princ_compDF$sample == 0,], shape = 21, fill = princ_compDF[princ_compDF$sample == 0,]$pop)
 medianDF$pop <- NA 
@@ -460,13 +480,64 @@ princ_compDF <- rbind(princ_compDF, medianDF)
 #medianDF <- princ_compDF[princ_compDF$sample %in% 2,]
 
 
-princ_comp_plot <- ggplot(princ_compDF, aes(x = PC1, y = PC2, fill = factor(fill), colour = factor(pop), size = size, alpha = alpha, shape = shape)) + scale_size_identity() + scale_alpha_identity()  + scale_x_continuous(limits = c(-0.4, 0.4)) + scale_y_continuous(limits = c(-0.35, 0.5)) + scale_shape_identity() + scale_color_brewer(palette = "Set2", na.value = "BLACK") + scale_fill_brewer(palette = "Set2", guide = 'none') + guides(colour = guide_legend(title = "Population")) 
-princ_comp_plot + geom_point()
-dev.off()
+princ_compDF_small <- princ_compDF[princ_compDF$sample <= 1000,]
+princ_compDF_small$size <- princ_compDF_small$size*2
+
+scatter_theme <- theme(text = element_text(size = 23, face = "bold", colour = "black"), title = element_text(colour = "black", size = 25, face = "bold"), panel.background = element_rect(fill = "white"), 
+      legend.position = "right", panel.grid = element_blank(), axis.ticks = element_line(size = 0.2, colour = "black"), axis.text = element_text(color = "black")) 
+      
+
+princ_comp_plot <- ggplot(princ_compDF_small, aes(x = PC1, y = PC2, fill = factor(fill), colour = factor(pop), size = size, alpha = alpha, shape = shape)) + 
+  scale_size_identity() + scale_alpha_identity()  + scale_x_continuous("Principal Component 1", color = "black", limits = c(-0.4, 0.4)) + scale_y_continuous("Principal Component 2", limits = c(-0.35, 0.5)) + scale_shape_identity() + 
+  scale_color_brewer(palette = "Set2", na.value = "BLACK") + scale_fill_brewer(palette = "Set2", guide = 'none') + guides(colour = guide_legend(title = "Population"))
+  
+princ_comp_plot + geom_point() + scatter_theme +
+  geom_vline(xintercept = c(-0.4, -0.2, 0, 0.2, 0.4), linetype = "longdash", size = 0.2, colour = "black") +
+  geom_hline(yintercept = c(-0.4, -0.2, 0, 0.2, 0.4), linetype = "longdash", size = 0.2, colour = "black")
+ggsave("principalComponents.pdf", height = 8, width = 10)
 
 
 
 
+### associate flight with principal components
+
+
+
+pc_flight_anova <- matrix(NA, ncol = length(mcmc_flight_cast[1,1,]), nrow = n_mcmc_samples)
+colnames(pc_flight_anova) <- names(mcmc_flight_cast[1,1,])
+
+mcmc_flight_cast_reorder <- mcmc_flight_cast[names(mcmc_flight_cast[,1,1]) %in% colnames(nonzero.flux),,]
+mcmc_flight_cast_reorder <- mcmc_flight_cast_reorder[chmatch(colnames(nonzero.flux), names(mcmc_flight_cast_reorder[,1,1])),,]
+
+#sort(names(mcmc_flight_cast[,i,1])[names(mcmc_flight_cast[,i,1]) %in% colnames(nonzero.flux)]) == colnames(nonzero.flux)]
+
+for(i in 1:n_mcmc_samples){
+  matchedTraits <- mcmc_flight_cast_reorder[,i,][rownames(mcmc_flight_cast_reorder[,i,]) %in% rownames(princ_compSave[[i]]),]
+  if(nrow(matchedTraits) < 50){next}
+  
+  design_matrix <- model.matrix( ~ PC1 + PC2 + PC1*PC2 + 0, as.data.frame(princ_compSave[[i]]))
+  for(flight_pheno in 1:length(mcmc_flight_cast[1,1,])){
+    pc_flight_anova[i, flight_pheno] <- anova(lm(matchedTraits[,flight_pheno] ~ design_matrix))[1,5]
+    }
+  }
+
+atp_flight_anova <- matrix(NA, ncol = length(mcmc_flight_cast[1,1,]), nrow = n_mcmc_samples)
+colnames(atp_flight_anova) <- names(mcmc_flight_cast[1,1,])
+
+
+
+energyGen <- data.frame(reaction = c("Hexokinase_c", "Phosphofructokinase_c", "Phosphoglycerate kinase_c", "Pyruvate kinase_c", "ATP synthetase"), ATPchange = c(-1, -1, 1, 1, 1))
+
+for(i in 1:n_mcmc_samples){
+  mcmc_flight_cast_reorder[,i,]
+  flux_dist <- FBA_list[[mcmc_sample]][rownames(FBA_list[[mcmc_sample]]) %in% energyGen$reaction, colnames(FBA_list[[mcmc_sample]]) %in% names(mcmc_flight_cast_reorder[,1,1])]
+    rownames(FBA_list[[i]]) %in% rownames(mcmc_flight_cast_reorder[,i,]),]
+  
+  design_matrix <- model.matrix( ~ PC1 + PC2 + PC1*PC2 + 0, as.data.frame(princ_compSave[[i]]))
+  for(flight_pheno in 1:length(mcmc_flight_cast[1,1,])){
+    pc_flight_anova[i, flight_pheno] <- anova(lm(matchedTraits[,flight_pheno] ~ design_matrix))[1,5]
+    }
+  }
 
 
 
